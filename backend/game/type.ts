@@ -19,7 +19,9 @@ export enum LocationType {
   SCHOOL = "SCHOOL",
   LIBRARY = "LIBRARY",
   HOSPITAL = "HOSPITAL",
-  GAS_STATION = "GAS_STATION"
+  GAS_STATION = "GAS_STATION",
+  ANYWHERE = "ANYWHERE",
+  CURRENT_LOCATION = "CURRENT_LOCATION"
 }
 
 export enum PlayerRole {

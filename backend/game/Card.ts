@@ -1,4 +1,4 @@
-import type { LocationType } from "./location.js";
+import type { LocationType } from "./location/location.js";
 
 export enum ItemCardType {
     FUEL,

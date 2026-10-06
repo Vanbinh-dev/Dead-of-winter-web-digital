@@ -1,15 +1,7 @@
-import { HELPLESS_SURVIVOR, type Survivor } from "./Survivor.js";
-
-export enum LocationType {
-    POLICE_STATION,
-    GROCERY_STORE,
-    SCHOOL,
-    LIBRARY,
-    HOSPITAL,
-    GAS_STATION,
-    ANYWHERE,
-    CURRENT_LOCATION
-}
+import { HELPLESS_SURVIVOR, type Survivor } from "../Survivor.js";
+import type { LocationType } from "../type.js";
+import { ColonyLocation } from "./colony.js";
+import { CanNotMoveException, FullBarricadeException, FullSurvivorException, FullZombieException, InvalidHelplessSurvivorException } from "./locationError.js";
 
 export abstract class BaseLocationException extends Error {
     constructor(message: string) {
@@ -18,58 +10,12 @@ export abstract class BaseLocationException extends Error {
     }
 }
 
-export class FullZombieException extends BaseLocationException {
-    constructor(
-        public readonly location: LocationType,
-        public readonly overFlowNumber: number,
-        public readonly entranceNumber?: number,
-        message?: string
-    ) {
-        const entranceDetail = entranceNumber !== undefined ? ` at entrance ${entranceNumber}` : "";
-        super(message ?? `Zombie overrun at location ${location}${entranceDetail}. ${overFlowNumber} zombies`);
-    }
-}
-
-export class FullSurvivorException extends BaseLocationException {
-    constructor(
-        public readonly survivor: Survivor,
-        public readonly location: LocationType
-    ) {
-        super(`Cannot place survivor '${survivor.id}' at ${location}: capacity reached.`);
-    }
-}
-
-export class FullBarricadeException extends BaseLocationException {
-    constructor(
-        public readonly location: LocationType,
-        public readonly entranceNumber?: number
-    ) {
-        const entranceDetail = entranceNumber !== undefined ? ` at entrance ${entranceNumber}` : "";
-        super(`Cannot place barricade at ${location}${entranceDetail}: maximum capacity reached.`);
-    }
-}
-
-export class CanNotMoveException extends BaseLocationException {
-    constructor(message: string) {
-        super(message);
-    }
-}
-
-export class InvalidHelplessSurvivorException extends BaseLocationException {
-    constructor(
-        public readonly survivor: Survivor,
-        public readonly location: LocationType
-    ) {
-        super(`Helpless survivors cannot be placed at non-colony location: ${location}`);
-    }
-}
-
 export interface ILocation {
     type: LocationType;
     maxSurvivorCapacity: number;
     maxZombieCapacity: number;
     maxBarricadeCapacity: number;
-    survivors: Survivor[];
+    survivors: Readonly<Survivor[]>;
     zombieCount: number;
     barricadeCount: number;
 
@@ -184,20 +130,4 @@ export abstract class BaseLocation implements ILocation {
     }
 }
 
-export class NonColonyLocation extends BaseLocation {
-    constructor(
-        type: LocationType,
-        maxSurvivorCapacity: number,
-        maxZombieCapacity: number,
-        maxBarricadeCapacity: number
-    ) {
-        super(type, maxSurvivorCapacity, maxZombieCapacity, maxBarricadeCapacity);
-    }
-
-    override addSurvivor(survivor: Survivor): void {
-        if (HELPLESS_SURVIVOR) {
-            throw new InvalidHelplessSurvivorException(survivor, this.type);
-        }
-        super.addSurvivor(survivor);
-    }
-}
+export const COLONY = new ColonyLocation(40, 7);
