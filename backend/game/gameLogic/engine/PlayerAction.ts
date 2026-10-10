@@ -1,12 +1,11 @@
-import type { Ctx } from "boardgame.io";
-import { CardPrimitives, type ItemSymbol } from "../../deck/Card.js";
-import type { SurvivorId, LocationId, CardId, PlayerId, EffectId, SurvivorLocationId } from "../Type.js";
-import { type GameState, type BasicReturnState, DicePrimitives } from "./EffectEngine.js";
-import type { G } from "../GameState.js";
+import type { Ctx, FnContext } from "boardgame.io";
 import { INVALID_MOVE } from 'boardgame.io/core';
-import type { FnContext } from "boardgame.io";
-import { SpatialPrimitives } from "./Spatial.js";
+import { CardDeckOperations, CardPrimitives, getDeck, type ItemSymbol } from "../../deck/Card.js";
+import type { G } from "../GameState.js";
+import type { CardId, EffectId, LocationId, PlayerId, SurvivorId, SurvivorLocationId } from "../Type.js";
+import { type BasicReturnState, DicePrimitives } from "./EffectEngine.js";
 import { ITEM_CARDS, SURVIVOR_CARDS } from "./GameData.js";
+import { SpatialPrimitives } from "./Spatial.js";
 
 export type RandomAPI = NonNullable<FnContext["random"]>;
 
@@ -182,16 +181,21 @@ export const PlayerActions = {
 
     if (targetType === "ZOMBIE") {
       const isColony = targetLocationId === "colony";
+      if (isColony && entranceIndex === undefined)
+        return INVALID_MOVE;
+
       const entrance = isColony
-        ? state.public.colony.entrances[0]
+        ? state.public.colony.entrances[entranceIndex!]
         : state.public.locations[targetLocationId]?.entrance;
 
       if (!entrance || entrance.zombies === 0)
         return INVALID_MOVE;
 
-      spendDieByIndex(state, activePlayerId, dieIndex);
-      SpatialPrimitives.destroyZombie(state.public, targetLocationId, 1, entranceIndex);
-      return applyExposureRoll(state, ctx, random, survivorId, targetLocationId);
+      if (isColony) {
+        SpatialPrimitives.destroyZombieFromColony(state.public, entranceIndex!, 1);
+      } else
+        SpatialPrimitives.destroyZombie(state.public, targetLocationId);
+      applyExposureRoll(state, ctx, random, survivorId, targetLocationId);
     }
 
     if (targetType === "SURVIVOR") {
@@ -237,14 +241,44 @@ export const PlayerActions = {
       return INVALID_MOVE;
 
     spendDieByIndex(state, activePlayerId, dieIndex);
-    return CardPrimitives.drawCard(state, locationId, activePlayerId, 1);
+    CardDeckOperations.revealCards(searchDeck, 1);
+  },
+
+  reveal(state: G, locationId: LocationId) {
+    const location = state.public.locations[locationId]
+    const deck = getDeck(state, locationId);
+
+    if (deck === undefined)
+      return INVALID_MOVE;
+
+    if (location.noise == 4)
+      return INVALID_MOVE;
+    location.noise++;
+    CardDeckOperations.revealCards(deck, 1);
+  },
+
+  addRevealCardToHand(state: G, playerId: PlayerId, card: CardId, deckId: LocationId) {
+    const player = state.public.players[playerId]
+    const privateInfo = state.private.players[playerId];
+    if (player === undefined || privateInfo === undefined)
+      return INVALID_MOVE;
+    const deck = getDeck(state, deckId)
+    if (deck === undefined || deck.revealCard.length == 0)
+      return INVALID_MOVE;
+    if (!deck.revealCard.includes(card))
+      return INVALID_MOVE;
+
+    const { nextDeck, cardId } = CardDeckOperations.takeCardFromRevealed(deck, card)
+    state.private.searchDecks[deckId] = nextDeck;
+    player.handSize++;
+    privateInfo.hand.push(card);
   },
 
   barricade(
     state: G,
     ctx: Ctx,
     survivorId: SurvivorId,
-    locationId: LocationId,
+    locationId: LocationId | 'colony',
     dieIndex: number,
     entranceNumber?: number
   ): BasicReturnState {
@@ -253,17 +287,17 @@ export const PlayerActions = {
 
     if (!survivor || survivor.owner !== activePlayerId || survivor.location !== locationId)
       return INVALID_MOVE;
-
-    const die = spendDieByIndex(state, activePlayerId, dieIndex);
-    if (die === null)
+    if (locationId == 'colony' && entranceNumber === undefined)
       return INVALID_MOVE;
-
-    return SpatialPrimitives.placeBarricade(
-      state.public,
-      locationId,
-      1,
-      entranceNumber
-    );
+    if (locationId == 'colony' && (entranceNumber! < 0 || entranceNumber! > 7))
+      return INVALID_MOVE;
+    const value = spendDieByIndex(state, activePlayerId, dieIndex);
+    if (value == undefined)
+      return INVALID_MOVE;
+    if (locationId == 'colony')
+      SpatialPrimitives.placeBarricadeToColony(state.public, entranceNumber!, 1);
+    else
+      SpatialPrimitives.placeBarricade(state.public, locationId, 1);
   },
 
   cleanWaste(state: G, ctx: Ctx, dieIndex: number): BasicReturnState {
@@ -286,22 +320,23 @@ export const PlayerActions = {
     state: G,
     ctx: Ctx,
     survivorId: SurvivorId,
-    fromLocationId: LocationId,
-    targetLocationId: LocationId,
+    attractLocation: LocationId,
+    firstTargetLocation: LocationId,
+    secondTargetLocation: LocationId | undefined,
     dieIndex: number,
-    amount = 2
   ): BasicReturnState {
     const survivor = state.public.survivors[survivorId];
     const activePlayerId = ctx.currentPlayer;
 
-    if (!survivor || survivor.owner !== activePlayerId || survivor.location !== targetLocationId)
+    if (!survivor || survivor.owner !== activePlayerId || survivor.location !== firstTargetLocation)
       return INVALID_MOVE;
 
     const die = spendDieByIndex(state, activePlayerId, dieIndex);
     if (die === null)
       return INVALID_MOVE;
-
-    return SpatialPrimitives.moveZombie(state.public, fromLocationId, targetLocationId, amount);
+    SpatialPrimitives.moveZombie(state.public, firstTargetLocation, attractLocation, 1);
+    if (secondTargetLocation)
+      SpatialPrimitives.moveZombie(state.public, secondTargetLocation, attractLocation, 1);
   },
 
   useSurvivorAbility(
@@ -316,12 +351,7 @@ export const PlayerActions = {
 
     if (!survivor || survivor.owner !== activePlayerId)
       return INVALID_MOVE;
-
-    if (dieIndex !== undefined) {
-      const die = spendDieByIndex(state, activePlayerId, dieIndex);
-      if (die === null)
-        return INVALID_MOVE;
-    }
+    return INVALID_MOVE;
   },
 
   moveSurvivor(
@@ -396,6 +426,7 @@ export const PlayerActions = {
       return CardPrimitives.equipCard(state, cardId, targetSurvivorId);
     }
 
+    // Resolve card effect
     return CardPrimitives.discardCard(state, playerId, cardId);
   },
 

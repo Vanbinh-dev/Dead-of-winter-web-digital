@@ -1,9 +1,6 @@
-import { CardDeckOperations, type CardDeck } from "../../deck/Card.js";
-import type { PublicGameState, PrivateGameState } from "../GameState.js";
-import { type LocationId, type PlayerId, type CardId, type SurvivorId, NON_COLONY_LOCATIONS, type WoundType } from "../Type.js";
-import { stat } from 'node:fs';
-import { PHASE_MANAGEMENT_RULES } from "./GamePhase.js";
 import type { RandomAPI } from "boardgame.io/dist/types/src/plugins/random/random.js";
+import type { PrivateGameState, PublicGameState } from "../GameState.js";
+import { type LocationId, type PlayerId, type WoundType } from "../Type.js";
 
 export type GameState = PublicGameState;
 

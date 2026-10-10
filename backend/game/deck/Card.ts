@@ -179,7 +179,7 @@ export interface ICardPrimitives {
     addCardToDeck(G: G, deckId: DeckId, cards: CardId[]): BasicReturnState;
 }
 
-function getDeck(G: G, deckId: DeckId): CardDeck | undefined {
+export function getDeck(G: G, deckId: DeckId): CardDeck | undefined {
     if (deckId === "crisis" || deckId === "crossroads" || deckId === "survivor" || deckId === "exile")
         return G.private.decks[deckId];
     if (deckId === "crisisContribution")

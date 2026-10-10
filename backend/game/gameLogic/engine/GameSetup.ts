@@ -6,10 +6,10 @@ import type { CardDeck } from "../../deck/Card.js";
 import type { G, PublicPlayerState, PrivatePlayerState, PublicLocationState, PublicColonyState, PublicGameState, PrivateGameState } from "../GameState.js";
 
 export interface GameSetup {
-     setUp(): GameState;
+     setUp(): G;
      chooseGameMode(state: GameState, ctx: Ctx, gameMode: 'normal' | 'co-op'): BasicReturnState;
      chooseMainObject(state: GameState, mainObjective: CardId, isRandom?: boolean): BasicReturnState;
-     gameStart(state: GameState): BasicReturnState;
+     gameStart(state: GameState): BasicReturnState;    
 }
 
 export function setupGame(ctx: Ctx, setupData?: { gameMode?: 'normal' | 'co-op' }): G {
@@ -81,6 +81,7 @@ export function setupGame(ctx: Ctx, setupData?: { gameMode?: 'normal' | 'co-op' 
           mainObjectiveProgress: 0,
           currentCrisisId: null,
           crisisContributionCount: 0,
+          additionEffect: [],
 
           players: publicPlayers,
           survivors: {},
@@ -122,6 +123,11 @@ export function setupGame(ctx: Ctx, setupData?: { gameMode?: 'normal' | 'co-op' 
           public: publicState,
           private: privateState,
      };
+}
+
+export const GAME_SETUP: GameSetup = {
+     setUp:  (),
+
 }
 
 function getItemIdsByLocation(loc: string): string[] {
