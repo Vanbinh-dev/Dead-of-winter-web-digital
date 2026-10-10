@@ -1,34 +1,25 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <title>Board Game Online</title>
-  <style>
-    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f4f4f9; }
-    h1 { margin-bottom: 10px; }
-    #status { margin-bottom: 20px; font-size: 1.2rem; font-weight: bold; }
-    /* Dựng bàn cờ 3x3 bằng CSS Grid */
-    .board { display: grid; grid-template-columns: repeat(3, 100px); grid-template-rows: repeat(3, 100px); gap: 5px; }
-    .cell { width: 100px; height: 100px; background-color: #fff; border: 2px solid #333; font-size: 2.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
-    .cell:hover { background-color: #e0e0e0; }
-  </style>
-</head>
-<body>
-  <h1>Board Game Caro (Tic-Tac-Toe)</h1>
-  <div id="status">Đang kết nối tới server...</div>
-  
-  <div id="board" class="board">
-    <div class="cell" data-id="0"></div>
-    <div class="cell" data-id="1"></div>
-    <div class="cell" data-id="2"></div>
-    <div class="cell" data-id="3"></div>
-    <div class="cell" data-id="4"></div>
-    <div class="cell" data-id="5"></div>
-    <div class="cell" data-id="6"></div>
-    <div class="cell" data-id="7"></div>
-    <div class="cell" data-id="8"></div>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dead of Winter - Client</title>
+  </head>
+  <body>
+    <div id="app">
+      <h2>Thiết lập Main Objective</h2>
+      <p>Mục tiêu hiện tại: <strong id="current-objective">Chưa chọn</strong></p>
 
-  <script type="module" src="./dist/client.js"></script>
-</body>
+      <label for="mission-select">Chọn nhiệm vụ:</label>
+      <select id="mission-select"></select>
+
+      <div style="margin-top: 12px; display: flex; gap: 8px;">
+        <button id="btn-choose">Xác nhận chọn</button>
+        <button id="btn-random">Chọn ngẫu nhiên</button>
+      </div>
+    </div>
+
+    <!-- Script trỏ vào file TypeScript chính -->
+    <script type="module" src="/backend/client.ts"></script>
+  </body>
 </html>

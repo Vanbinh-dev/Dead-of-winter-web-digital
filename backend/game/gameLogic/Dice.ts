@@ -24,6 +24,10 @@ export class Dice {
     }
 }
 
+export function random(begin: number, end: number) {
+    return Math.floor(Math.random() * (end - begin + 1)) + begin;
+}
+
 export const SIX_SIDE_DICE = new Dice(
     new Map([
         ['1', 1],
