@@ -1,0 +1,55 @@
+{
+     "survivors": [
+          {
+               "id": "sparky",
+               "name": "Sparky",
+               "title": "The Stunt Dog",
+               "influence": 2,
+               "searchRequirement": 4,
+               "attackRequirement": 2,
+               "maxWounds": 3,
+               "ability": {
+                    "condition": [],
+                    "cost": [],
+                    "activeEffect": [],
+                    "passiveEffect": [],
+                    "description": "Sparky does not roll for exposure when moving or attacking."
+               },
+               "linkImage": ""
+          },
+          {
+               "id": "officer_grey",
+               "name": "Grey",
+               "title": "The Police Officer",
+               "influence": 58,
+               "searchRequirement": 4,
+               "attackRequirement": 1,
+               "maxWounds": 3,
+               "ability": {
+                    "condition": [],
+                    "cost": [],
+                    "activeEffect": [],
+                    "passiveEffect": [],
+                    "description": "Once per round, you may kill 1 zombie at Grey's location without spending an action die."
+               },
+               "linkImage": ""
+          },
+          {
+               "id": "forest_plum",
+               "name": "Forest Plum",
+               "title": "The Mall Santa",
+               "influence": 47,
+               "searchRequirement": 3,
+               "attackRequirement": 4,
+               "maxWounds": 3,
+               "ability": {
+                    "condition": [],
+                    "cost": [],
+                    "activeEffect": [],
+                    "passiveEffect": [],
+                    "description": "When Forest searches the Grocery Store, you may look at 2 additional cards."
+               },
+               "linkImage": ""
+          }
+     ]
+}

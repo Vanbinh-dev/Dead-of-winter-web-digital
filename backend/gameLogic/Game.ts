@@ -1,0 +1,349 @@
+import type { Game } from "boardgame.io";
+import type { GameState } from "../state/GameState.js";
+import { setupInitialGame } from "../gameSetup/GameSetup.js";
+
+// Re-export helpers
+export * from "./DeckLogic.js";
+export * from "./PlayerAction.js";
+
+// Nhập atomic moves từ các module con
+import {
+    rollSixSideDice,
+    rollExposureDice,
+    changeActionDie,
+    rerollActionDie,
+    bringUsedDieToUnused,
+    bringUnusedDieToUsed,
+    removeActionDie,
+    addActionDie,
+    rerollAllActionDie,
+    spendActionDice
+} from "./DiceLogic.js";
+
+import {
+    draw,
+    removeCardFromDeck,
+    putCardToDeck,
+    shuffleDeck,
+    reveal,
+    clearReveal,
+    takeCardFromReveal,
+    takeCardFromDeck,
+    moveCardBetweenDecks,
+    addCardToHand,
+    removeCardFromHand,
+    transferCardBetweenPlayers,
+    addCardToWaste,
+    removeCardFromWaste
+} from "./DeckLogic.js";
+
+import {
+    addHelplessSurvivor,
+    removeHelplessSurvivor,
+    addFood,
+    removeFood,
+    addStarvation,
+    removeStarvation,
+    spawnZombieAtColony,
+    removeZombieAtColony,
+    spawnZombieAtLocation,
+    removeZombieAtLocation,
+    buildBarricadeAtColony,
+    removeBarricadeAtColony,
+    buildBarricadeAtLocation,
+    removeBarricadeAtLocation,
+    addNoise,
+    removeNoise
+} from "./LocationLogic.js";
+
+import {
+    moveSurvivor,
+    spawnSurvivor,
+    removeSurvivor,
+    markAsMoved,
+    markAsNotMoved,
+    receiveWound,
+    removeWound,
+    removeAllWound,
+    equipCard,
+    unequipCard,
+    transferEquip,
+    killHelplessSurvivor
+} from "./SurvivorLogic.js";
+
+import {
+    changeMorale,
+    changeRound,
+    setFirstPlayer,
+    exilePlayer,
+    unexilePlayer,
+    useItemCard,
+    setPendingAction,
+    clearPendingAction,
+    applyExposureResult,
+    resolveBiteAcceptDeath,
+    resolveBiteRollRisk,
+    initiateVoteExile,
+    castVote,
+    cancelVote,
+    triggerPendingEffect,
+    resolveTriggerEffect
+} from "./GameScaleLogic.js";
+
+import {
+    playerMoveSurvivor,
+    playerSpendFoodToken,
+    playerPlayCard,
+    playerContributeToCrisis,
+    playerHandOff,
+    playerAttackZombie,
+    playerSearch,
+    playerBarricade,
+    playerCleanWaste,
+    playerAttractZombies,
+    playerAttackSurvivor,
+    playerSearchMakeNoise,
+    playerFinishSearch,
+    playerRequestCard
+} from "./PlayerAction.js";
+
+import {
+    chooseStartingSurvivors,
+    chooseGroupLeader,
+    startGame,
+    revealCrisis,
+    rollRoundActionDice,
+    startPlayerPhase,
+    startPlayerTurn,
+    endPlayerTurn,
+    attackSurvivor,
+    searchMakeNoise,
+    finishSearch,
+    requestCard,
+    payFood,
+    checkWaste,
+    resolveCrisis,
+    addColonyZombies,
+    checkMainObjective,
+    advanceRoundTracker,
+    passFirstPlayerToken,
+    gamePhaseMoves,
+    CRISIS_CATALOG,
+    getItemCardSymbol
+} from "./GamePhaseLogic.js";
+
+export * from "./GamePhaseLogic.js";
+
+// Export các hàm riêng lẻ
+export {
+    rollSixSideDice,
+    rollExposureDice,
+    changeActionDie,
+    rerollActionDie,
+    bringUsedDieToUnused,
+    bringUnusedDieToUsed,
+    removeActionDie,
+    addActionDie,
+    rerollAllActionDie,
+    spendActionDice,
+    draw,
+    removeCardFromDeck,
+    putCardToDeck,
+    shuffleDeck,
+    reveal,
+    clearReveal,
+    takeCardFromReveal,
+    takeCardFromDeck,
+    moveCardBetweenDecks,
+    addCardToHand,
+    removeCardFromHand,
+    transferCardBetweenPlayers,
+    addCardToWaste,
+    removeCardFromWaste,
+    addHelplessSurvivor,
+    removeHelplessSurvivor,
+    addFood,
+    removeFood,
+    addStarvation,
+    removeStarvation,
+    spawnZombieAtColony,
+    removeZombieAtColony,
+    spawnZombieAtLocation,
+    removeZombieAtLocation,
+    buildBarricadeAtColony,
+    removeBarricadeAtColony,
+    buildBarricadeAtLocation,
+    removeBarricadeAtLocation,
+    addNoise,
+    removeNoise,
+    moveSurvivor,
+    spawnSurvivor,
+    removeSurvivor,
+    markAsMoved,
+    markAsNotMoved,
+    receiveWound,
+    removeWound,
+    removeAllWound,
+    equipCard,
+    unequipCard,
+    transferEquip,
+    killHelplessSurvivor,
+    changeMorale,
+    changeRound,
+    setFirstPlayer,
+    exilePlayer,
+    unexilePlayer,
+    useItemCard,
+    setPendingAction,
+    clearPendingAction,
+    applyExposureResult,
+    resolveBiteAcceptDeath,
+    resolveBiteRollRisk,
+    initiateVoteExile,
+    castVote,
+    cancelVote,
+    triggerPendingEffect,
+    resolveTriggerEffect,
+    playerMoveSurvivor,
+    playerSpendFoodToken,
+    playerPlayCard,
+    playerContributeToCrisis,
+    playerHandOff,
+    playerAttackZombie,
+    playerSearch,
+    playerBarricade,
+    playerCleanWaste,
+    playerAttractZombies
+};
+
+/**
+ * Đối tượng Game boardgame.io tinh gọn, kết nối tất cả các atomic moves & player action chains
+ */
+export const DEAD_OF_WINTER_GAME: Game<GameState> = {
+    name: "dead-of-winter",
+
+    setup: ({ ctx }) => setupInitialGame(ctx.numPlayers || 1),
+
+    moves: {
+        // GamePhase Moves (Tổ chức theo 4 Phase chuẩn của luật chơi)
+        chooseStartingSurvivors,
+        chooseGroupLeader,
+        startGame,
+        revealCrisis,
+        rollRoundActionDice,
+        startPlayerPhase,
+        startPlayerTurn,
+        endPlayerTurn,
+        attackSurvivor,
+        searchMakeNoise,
+        finishSearch,
+        requestCard,
+        payFood,
+        checkWaste,
+        resolveCrisis,
+        addColonyZombies,
+        checkMainObjective,
+        advanceRoundTracker,
+        passFirstPlayerToken,
+
+        // Player Action Chains (Theo đúng luật chơi)
+        playerMoveSurvivor,
+        playerSpendFoodToken,
+        playerPlayCard,
+        playerContributeToCrisis,
+        playerHandOff,
+        playerAttackZombie,
+        playerSearch,
+        playerBarricade,
+        playerCleanWaste,
+        playerAttractZombies,
+        playerAttackSurvivor,
+        playerSearchMakeNoise,
+        playerFinishSearch,
+        playerRequestCard,
+
+        // Atomic Moves (Dành cho Sandbox / Fine-tuning / Admin / Undo-Redo)
+        // Dice
+        rollSixSideDice,
+        rollExposureDice,
+        changeActionDie,
+        rerollActionDie,
+        bringUsedDieToUnused,
+        bringUnusedDieToUsed,
+        removeActionDie,
+        addActionDie,
+        rerollAllActionDie,
+        spendActionDice,
+
+        // Deck, Hand, Waste & Admin
+        draw,
+        removeCardFromDeck,
+        putCardToDeck,
+        shuffleDeck,
+        reveal,
+        clearReveal,
+        takeCardFromReveal,
+        takeCardFromDeck,
+        moveCardBetweenDecks,
+        addCardToHand,
+        removeCardFromHand,
+        transferCardBetweenPlayers,
+        addCardToWaste,
+        removeCardFromWaste,
+
+        // Location & Colony
+        addHelplessSurvivor,
+        removeHelplessSurvivor,
+        addFood,
+        removeFood,
+        addStarvation,
+        removeStarvation,
+        spawnZombieAtColony,
+        removeZombieAtColony,
+        spawnZombieAtLocation,
+        removeZombieAtLocation,
+        buildBarricadeAtColony,
+        removeBarricadeAtColony,
+        buildBarricadeAtLocation,
+        removeBarricadeAtLocation,
+        addNoise,
+        removeNoise,
+
+        // Survivor
+        moveSurvivor,
+        spawnSurvivor,
+        removeSurvivor,
+        markAsMoved,
+        markAsNotMoved,
+        receiveWound,
+        removeWound,
+        removeAllWound,
+        equipCard,
+        unequipCard,
+        transferEquip,
+        killHelplessSurvivor,
+
+        // Game Scale & Pending / Triggers
+        changeMorale,
+        changeRound,
+        setFirstPlayer,
+        exilePlayer,
+        unexilePlayer,
+        useItemCard,
+        setPendingAction,
+        clearPendingAction,
+        applyExposureResult,
+        resolveBiteAcceptDeath,
+        resolveBiteRollRisk,
+        initiateVoteExile,
+        castVote,
+        cancelVote,
+        triggerPendingEffect,
+        resolveTriggerEffect
+    },
+
+    turn: {
+        minMoves: 0,
+        maxMoves: Infinity
+    }
+};

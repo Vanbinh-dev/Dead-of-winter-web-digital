@@ -21,6 +21,7 @@
     "declarationMap": true,
 
     // Stricter Typechecking Options
+    "resolveJsonModule": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
 
