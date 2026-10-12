@@ -503,11 +503,7 @@ export const addColonyZombies: MoveFunction<[]> = (context: MoveContext) => {
     const totalColonyHeads = colonySurvivors + G.public.colony.helpless;
     const colonyZombiesToAdd = Math.ceil(totalColonyHeads / 2);
 
-    for (let i = 0; i < colonyZombiesToAdd; i++) {
-        const entranceIdx = (i % 6) + 1;
-        // spawnZombieAtColony tự động kiểm tra barricade & overrun
-        spawnZombieAtColony(context, entranceIdx, 1);
-    }
+    spawnZombieAtColony(context, colonyZombiesToAdd);
 
     // 2. Zombie ở 6 địa điểm bên ngoài
     const LOCATIONS = ["gasStation", "hospital", "library", "school", "groceryStore", "policeStation"] as const;

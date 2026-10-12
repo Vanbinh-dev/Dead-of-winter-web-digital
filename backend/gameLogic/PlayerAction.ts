@@ -16,7 +16,8 @@ import {
     markAsMoved,
     equipCard,
     transferEquip,
-    receiveWound
+    receiveWound,
+    hasSurvivorPassive
 } from "./SurvivorLogic.js";
 
 import {
@@ -44,13 +45,8 @@ import {
     applyExposureResult
 } from "./GameScaleLogic.js";
 
-/**
- * Trợ giúp thực hiện đổ và áp dụng xúc xắc Exposure cho survivor:
- * Tái sử dụng rollExposureDice + applyExposureResult nguyên tử.
- */
 function performExposureRollForSurvivor(context: MoveContext, survivorId: SurvivorID): void {
     const { random } = context;
-    // 12 mặt: 6 blank, 3 wound, 2 frostbite, 1 bite
     const roll = random ? random.Die(12) : Math.floor(Math.random() * 12) + 1;
     let result: 'blank' | 'wound' | 'frostbite' | 'bite' = 'blank';
     if (roll >= 1 && roll <= 6) result = 'blank';
@@ -58,7 +54,6 @@ function performExposureRollForSurvivor(context: MoveContext, survivorId: Surviv
     else if (roll >= 10 && roll <= 11) result = 'frostbite';
     else result = 'bite';
 
-    // Cập nhật log
     context.G.public.previousLog = {
         player: context.G.public.currentPlayerID,
         playerName: context.G.public.players[context.G.public.currentPlayerID]?.playerName || "Player",
@@ -66,23 +61,9 @@ function performExposureRollForSurvivor(context: MoveContext, survivorId: Surviv
         description: `${SURVIVOR_CATALOG[survivorId]?.name || survivorId} rolled: ${result.toUpperCase()} (die: ${roll})`
     };
 
-    // Áp dụng kết quả qua atomic move
     applyExposureResult(context, survivorId, result);
 }
 
-// ============================================================================
-// I. CÁC HÀNH ĐỘNG MIỄN PHÍ CỦA PLAYER (TÁI CHẾ TỪ ATOMIC MOVES)
-// ============================================================================
-
-/**
- * 1. Di chuyển Survivor:
- * - Kiểm tra điều kiện: người chơi sở hữu, survivor chưa di chuyển trong turn (!hasMoved).
- * - Tái sử dụng:
- *   + moveSurvivor(...)
- *   + markAsMoved(...)
- *   + removeCardFromHand + addCardToWaste (nếu dùng Fuel)
- *   + applyExposureResult (nếu không dùng Fuel và không phải Sparky)
- */
 export const playerMoveSurvivor = (
     context: MoveContext,
     survivorId: SurvivorID,
@@ -116,17 +97,15 @@ export const playerMoveSurvivor = (
         }
     }
 
-    // 4. Đổ xúc xắc mạo hiểm Exposure nếu không dùng fuel (và không phải Sparky)
-    if (!usedFuel && survivorId !== 'sparky') {
+    // 4. Đổ xúc xắc mạo hiểm Exposure nếu không dùng fuel (và không có passive NO_EXPOSURE_WHEN_MOVING)
+    if (!usedFuel && !hasSurvivorPassive(survivorId, 'NO_EXPOSURE_WHEN_MOVING')) {
         performExposureRollForSurvivor(context, survivorId);
     }
 };
 
 /**
  * 2. Tiêu thụ Food Token để tăng Action Die:
- * - Tái sử dụng:
- *   + removeFood(...)
- *   + changeActionDie(...)
+ * - Người chơi bị Exile không được dùng Food Token.
  */
 export const playerSpendFoodToken = (
     context: MoveContext,
@@ -136,12 +115,41 @@ export const playerSpendFoodToken = (
     const actorId = playerID ?? G.public.currentPlayerID;
     const player = G.public.players[actorId];
 
-    if (!player || G.public.colony.food <= 0) return INVALID_MOVE;
+    if (!player || player.isExiled || G.public.colony.food <= 0) return INVALID_MOVE;
     const currentVal = player.die.unused[dieIndex];
     if (currentVal === undefined || currentVal >= 6) return INVALID_MOVE;
 
     // Tái sử dụng atomic removeFood & changeActionDie
     removeFood(context, 1);
+    changeActionDie(context, actorId, dieIndex, currentVal + 1);
+};
+
+/**
+ * Tiêu thụ Food Card từ tay để tăng Action Die:
+ * - Người chơi bình thường bỏ vào Waste pile.
+ * - Người chơi bị Exile bỏ vào removedItem.
+ */
+export const playerSpendFoodCard = (
+    context: MoveContext,
+    foodCardId: ItemID,
+    dieIndex: number
+) => {
+    const { G, playerID } = context;
+    const actorId = playerID ?? G.public.currentPlayerID;
+    const player = G.public.players[actorId];
+    const privPl = G.private.players[actorId];
+
+    if (!player || !privPl || !privPl.hand.includes(foodCardId)) return INVALID_MOVE;
+    const currentVal = player.die.unused[dieIndex];
+    if (currentVal === undefined || currentVal >= 6) return INVALID_MOVE;
+
+    removeCardFromHand(context, actorId, [foodCardId]);
+    if (player.isExiled) {
+        putCardToDeck(context, 'removedItem', [foodCardId], 'bottom');
+    } else {
+        addCardToWaste(context, [foodCardId]);
+    }
+
     changeActionDie(context, actorId, dieIndex, currentVal + 1);
 };
 
@@ -243,16 +251,14 @@ export const playerAttackZombie = (
 
     const reqAttack = SURVIVOR_CATALOG[survivorId]?.powerIndex ?? 2;
 
-    // 1. Tái sử dụng atomic spendActionDice (đã kiểm tra dieIndex và requireMin)
     const spendRes = spendActionDice(context, actorId, dieIndex, reqAttack);
     if (spendRes === INVALID_MOVE) return INVALID_MOVE;
 
-    // 2. Tái sử dụng atomic removeZombie
     if (survivor.location === 'colony') {
         let entIdx = colonyEntranceIndex;
         if (!entIdx) {
             const foundIdx = G.public.colony.entrances.findIndex(e => e.zombie > 0);
-            if (foundIdx === -1) return INVALID_MOVE; // Không có zombie nào ở Colony
+            if (foundIdx === -1) return INVALID_MOVE; 
             entIdx = foundIdx + 1;
         }
         const remZRes = removeZombieAtColony(context, entIdx, 1);
@@ -262,8 +268,7 @@ export const playerAttackZombie = (
         if (remZRes === INVALID_MOVE) return INVALID_MOVE;
     }
 
-    // 3. Đổ xúc xắc exposure nếu không được miễn nhiễm (Mike Cho & Sparky miễn)
-    if (survivorId !== 'mike_cho' && survivorId !== 'sparky') {
+    if (!hasSurvivorPassive(survivorId, 'NO_EXPOSURE_WHEN_ATTACK')) {
         performExposureRollForSurvivor(context, survivorId);
     }
 };
@@ -469,10 +474,7 @@ export const playerAttackSurvivor = (
 
     // 3. Nếu kết quả <= attack requirement của survivor bị tấn công -> Thành công
     if (reroll <= targetReq) {
-        // Nhận 1 wound
-        receiveWound(context, targetSurvivorId, 'wound');
-
-        // Cướp ngẫu nhiên 1 lá từ tay đối thủ
+        // Cướp ngẫu nhiên 1 lá từ tay đối thủ TRƯỚC (nếu đối thủ còn bài)
         const targetPriv = G.private.players[target.belongPlayer];
         if (targetPriv && targetPriv.hand.length > 0) {
             const stealIdx = random ? random.Die(targetPriv.hand.length) - 1 : Math.floor(Math.random() * targetPriv.hand.length);
@@ -481,6 +483,9 @@ export const playerAttackSurvivor = (
                 transferCardBetweenPlayers(context, target.belongPlayer, actorId, stolenCard);
             }
         }
+
+        // Sau đó mới nhận 1 wound (tự động check tử vong)
+        receiveWound(context, targetSurvivorId, 'wound');
     }
 };
 

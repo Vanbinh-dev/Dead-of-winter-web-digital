@@ -3,7 +3,7 @@ import type { LocationID } from "../state/Location.js";
 import type { SurvivorID } from "../state/Card.js";
 import { INVALID_MOVE } from "boardgame.io/core";
 import { SURVIVOR_CATALOG } from "../gameSetup/GameSetup.js";
-import { removeSurvivor, killHelplessSurvivor, spawnSurvivor } from "./SurvivorLogic.js";
+import { removeSurvivor, killHelplessSurvivor, spawnSurvivor, handleSurvivorDeath } from "./SurvivorLogic.js";
 import { changeMorale } from "./GameScaleLogic.js";
 import { putCardToDeck, addCardToHand } from "./DeckLogic.js";
 
@@ -49,65 +49,8 @@ export const removeStarvation = ({ G }: MoveContext, amount: number) => {
 //    - Nếu không có survivor và không có helpless -> Không xảy ra chuyện gì, zombie bị loại bỏ.
 // ============================================================================
 
-/**
- * Xử lý cái chết của 1 survivor khi bị giết (Overrun, Bite, 3 vết thương, v.v.)
- * TÁI SỬ DỤNG HOÀN TOÀN TỪ CÁC HÀNH ĐỘNG NGUYÊN TỬ:
- * - changeMorale(-1)
- * - putCardToDeck('removedSurvivor', [survivorId], 'top')
- * - rơi đồ: ở Colony về tay (addCardToHand), ở ngoài xáo vào deck địa điểm (putCardToDeck)
- * - removeSurvivor(survivorId) khỏi board
- * - Kiểm tra luật "Survivor cuối cùng chết" (GAME_RULE.md dòng 170-172): bỏ hết bài trên tay, rút survivor mới
- */
-export function handleSurvivorDeath(context: MoveContext, survivorId: SurvivorID): void {
-    const { G } = context;
-    const survivor = G.public.survivorInfo[survivorId];
-    if (!survivor) return;
+export { handleSurvivorDeath } from "./SurvivorLogic.js";
 
-    const belongPlayer = survivor.belongPlayer;
-    const loc = survivor.location;
-
-    // 1. Giảm Morale
-    changeMorale(context, -1);
-
-    // 2. Chuyển thẻ bài nhân vật sang removedSurvivor deck
-    putCardToDeck(context, 'removedSurvivor', [survivorId], 'top');
-
-    // 3. Rơi trang bị: Colony -> về tay người chơi; ngoài Colony -> xáo vào deck địa điểm đó
-    if (survivor.equippedItems && survivor.equippedItems.length > 0) {
-        const items = [...survivor.equippedItems];
-        if (loc === 'colony') {
-            addCardToHand(context, belongPlayer, items);
-        } else {
-            putCardToDeck(context, loc, items, 'shuffle');
-        }
-    }
-
-    // 4. Gỡ survivor khỏi board
-    removeSurvivor(context, survivorId);
-
-    // 5. Kiểm tra luật Survivor cuối cùng chết (GAME_RULE.md dòng 170-172)
-    const player = G.public.players[belongPlayer];
-    if (player && player.survivorList.length === 0) {
-        // Mất toàn bộ bài trên tay khỏi game
-        const privPl = G.private.players[belongPlayer];
-        if (privPl && privPl.hand.length > 0) {
-            putCardToDeck(context, 'removedItem', [...privPl.hand], 'bottom');
-            privPl.hand = [];
-            player.handSize = 0;
-        }
-        // Rút 1 survivor mới từ survivorDeck và đặt vào Colony
-        if (G.private.survivorDeck.cards.length > 0) {
-            const newSurvivorId = G.private.survivorDeck.cards.shift()!;
-            spawnSurvivor(context, newSurvivorId, belongPlayer, 'colony');
-            G.public.previousLog = {
-                player: belongPlayer,
-                playerName: player.playerName,
-                reason: "Last Survivor Killed",
-                description: `${SURVIVOR_CATALOG[survivorId]?.name || survivorId} was last survivor! Hand cards removed from game. Drew new survivor: ${SURVIVOR_CATALOG[newSurvivorId]?.name || newSurvivorId}.`
-            };
-        }
-    }
-}
 
 /**
  * Xử lý Overrun tại 1 location:
@@ -140,28 +83,69 @@ function handleOverrunAtLocation(context: MoveContext, location: LocationID | 'c
     }
 }
 
-export const spawnZombieAtColony = (context: MoveContext, entranceIndex: number, amount: number = 1) => {
+/**
+ * Thao tác thêm 1 zombie vào 1 entrance cụ thể tại Colony (kiểm tra barricade -> capacity -> overrun)
+ */
+export function spawnSingleZombieAtColonyEntrance(context: MoveContext, entranceIndex: number): void {
+    const { G } = context;
+    const entrance = G.public.colony.entrances[entranceIndex - 1];
+    if (!entrance) return;
+
+    if (entrance.barricade > 0) {
+        entrance.barricade--;
+        return;
+    }
+
+    if (entrance.zombie < entrance.maxZombieCapacity) {
+        entrance.zombie++;
+        return;
+    }
+
+    handleOverrunAtLocation(context, 'colony');
+}
+
+/**
+ * Thêm zombie vào Colony:
+ * - Khi thêm số lượng `amount`: Luôn xoay vòng bắt đầu từ cổng 1 (1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 1...).
+ * - Nếu chỉ định `entranceIndex`: Thêm vào đúng cổng đó.
+ */
+export const spawnZombieAtColony = (
+    context: MoveContext,
+    arg1: number = 1,
+    arg2?: number
+) => {
+    // Nếu chỉ có 1 tham số -> hiểu là amount và xoay vòng luôn bắt đầu từ cổng 1
+    if (arg2 === undefined) {
+        const amount = arg1;
+        if (amount <= 0) return INVALID_MOVE;
+        for (let i = 0; i < amount; i++) {
+            const entranceIndex = (i % 6) + 1;
+            spawnSingleZombieAtColonyEntrance(context, entranceIndex);
+        }
+        return;
+    }
+
+    // Nếu có 2 tham số: (entranceIndex, amount) hoặc (amount, entranceIndex)
+    let entranceIndex: number;
+    let amount: number;
+    if (arg1 >= 1 && arg1 <= 6 && arg2 > 0) {
+        entranceIndex = arg1;
+        amount = arg2;
+    } else {
+        amount = arg1;
+        entranceIndex = arg2;
+    }
+
     const { G } = context;
     const entrance = G.public.colony.entrances[entranceIndex - 1];
     if (!entrance || amount <= 0) return INVALID_MOVE;
 
     for (let i = 0; i < amount; i++) {
-        // 1. Triệt tiêu rào chắn nếu có
-        if (entrance.barricade > 0) {
-            entrance.barricade--;
-            continue;
-        }
-
-        // 2. Thêm zombie nếu còn chỗ
-        if (entrance.zombie < entrance.maxZombieCapacity) {
-            entrance.zombie++;
-            continue;
-        }
-
-        // 3. Quá tải (Overrun)
-        handleOverrunAtLocation(context, 'colony');
+        spawnSingleZombieAtColonyEntrance(context, entranceIndex);
     }
 };
+
+export const spawnZombieAtColonyRoundRobin = spawnZombieAtColony;
 
 export const removeZombieAtColony = ({ G }: MoveContext, entranceIndex: number, amount: number) => {
     const entrance = G.public.colony.entrances[entranceIndex - 1];
@@ -169,22 +153,17 @@ export const removeZombieAtColony = ({ G }: MoveContext, entranceIndex: number, 
     entrance.zombie = Math.max(0, entrance.zombie - amount);
 };
 
-/**
- * Thêm zombie tại địa điểm ngoài (tuân thủ quy tắc nguyên thủy: triệt tiêu rào chắn / overrun)
- */
 export const spawnZombieAtLocation = (context: MoveContext, atLoc: LocationID, amount: number = 1) => {
     const { G } = context;
     const loc = G.public.location[atLoc];
     if (!loc || amount <= 0) return INVALID_MOVE;
 
     for (let i = 0; i < amount; i++) {
-        // 1. Triệt tiêu rào chắn nếu có
         if (loc.entrance.barricade > 0) {
             loc.entrance.barricade--;
             continue;
         }
 
-        // 2. Thêm zombie nếu còn chỗ
         if (loc.entrance.zombie < loc.entrance.maxZombieCapacity) {
             loc.entrance.zombie++;
             continue;

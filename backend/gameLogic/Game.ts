@@ -45,6 +45,7 @@ import {
     addStarvation,
     removeStarvation,
     spawnZombieAtColony,
+    spawnZombieAtColonyRoundRobin,
     removeZombieAtColony,
     spawnZombieAtLocation,
     removeZombieAtLocation,
@@ -87,12 +88,20 @@ import {
     castVote,
     cancelVote,
     triggerPendingEffect,
-    resolveTriggerEffect
+    resolveTriggerEffect,
+    startAdminTrigger,
+    submitAdminAction,
+    castAdminVote,
+    rollbackAdminSnapshot,
+    resolveNewSurvivorPlacement,
+    resolveChooseLeader,
+    confirmPendingResolution
 } from "./GameScaleLogic.js";
 
 import {
     playerMoveSurvivor,
     playerSpendFoodToken,
+    playerSpendFoodCard,
     playerPlayCard,
     playerContributeToCrisis,
     playerHandOff,
@@ -167,6 +176,7 @@ export {
     addStarvation,
     removeStarvation,
     spawnZombieAtColony,
+    spawnZombieAtColonyRoundRobin,
     removeZombieAtColony,
     spawnZombieAtLocation,
     removeZombieAtLocation,
@@ -204,8 +214,16 @@ export {
     cancelVote,
     triggerPendingEffect,
     resolveTriggerEffect,
+    startAdminTrigger,
+    submitAdminAction,
+    castAdminVote,
+    rollbackAdminSnapshot,
+    resolveNewSurvivorPlacement,
+    resolveChooseLeader,
+    confirmPendingResolution,
     playerMoveSurvivor,
     playerSpendFoodToken,
+    playerSpendFoodCard,
     playerPlayCard,
     playerContributeToCrisis,
     playerHandOff,
@@ -249,6 +267,7 @@ export const DEAD_OF_WINTER_GAME: Game<GameState> = {
         // Player Action Chains (Theo đúng luật chơi)
         playerMoveSurvivor,
         playerSpendFoodToken,
+        playerSpendFoodCard,
         playerPlayCard,
         playerContributeToCrisis,
         playerHandOff,
@@ -339,7 +358,14 @@ export const DEAD_OF_WINTER_GAME: Game<GameState> = {
         castVote,
         cancelVote,
         triggerPendingEffect,
-        resolveTriggerEffect
+        resolveTriggerEffect,
+        startAdminTrigger,
+        submitAdminAction,
+        castAdminVote,
+        rollbackAdminSnapshot,
+        resolveNewSurvivorPlacement,
+        resolveChooseLeader,
+        confirmPendingResolution
     },
 
     turn: {

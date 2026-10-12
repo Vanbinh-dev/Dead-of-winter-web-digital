@@ -4,8 +4,9 @@ import type { LocationID, PublicColonyState, PublicLocationState } from "./Locat
 import type { PublicSurvivorInfo } from "./Survivor.js";
 
 export interface GameState {
-     public: PublicGameState,
-     private: PrivateGameState
+     public: PublicGameState;
+     private: PrivateGameState;
+     snapshot?: string | null;
 }
 
 export type GameMode = 'co-op' | 'contain-betrayer';
@@ -43,46 +44,52 @@ export interface PublicPlayerState {
      playerName: string;
      survivorList: SurvivorID[];
      handSize: number;
+     isExiled?: boolean;
+     groupLeader?: SurvivorID | null;
      die: {
-          unused: number[],
-          used: number[]
-     }
+          unused: number[];
+          used: number[];
+     };
 }
 
 export interface PrivateGameState {
-     id: PlayerID,
-     survivorDeck: Deck<SurvivorID>,
-     crisisDeck: Deck<CrisisID>,
-     crossroadDeck: Deck<CrossroadID>,
-     mainObjectiveDeck: Deck<MainObjectiveID>,
-     secretObjective: Deck<SecretObjectiveID>,
-     exileObjective: Deck<ExileObjectiveID>
+     id: PlayerID;
+     survivorDeck: Deck<SurvivorID>;
+     crisisDeck: Deck<CrisisID>;
+     crossroadDeck: Deck<CrossroadID>;
+     mainObjectiveDeck: Deck<MainObjectiveID>;
+     secretObjective: Deck<SecretObjectiveID>;
+     exileObjective: Deck<ExileObjectiveID>;
 
-     starterItemDeck: Deck<ItemID>,
-     location: Record<LocationID, Deck<ItemID>>
+     starterItemDeck: Deck<ItemID>;
+     location: Record<LocationID, Deck<ItemID>>;
 
-     players: Record<PlayerID, PrivatePlayerState>
+     players: Record<PlayerID, PrivatePlayerState>;
 
-     crisisContribution: Deck<ItemID>
+     crisisContribution: Deck<ItemID>;
 }
 
 export interface PrivatePlayerState {
-     hand: ItemID[],
-     secretObjective: SecretObjectiveID | null,
+     hand: ItemID[];
+     secretObjective: SecretObjectiveID | null;
      crossroadCardHolding: CrossroadID;
      vote: 'yes' | 'no' | null;
 }
 
 export type PendingAction =
-     { type: 'reveal', playerId: PlayerID; location: LocationID; } |
-     { type: 'drawFromReveal', playerId: PlayerID; card: CardID[]; survivorId?: SurvivorID; location?: LocationID } |
-     { type: 'vote', playerId: PlayerID; targetPlayerId?: PlayerID; issue?: string } |
-     { type: 'resolveTriggerEffect', playerId: PlayerID; effectDescription?: string } |
-     { type: 'biteSpread', survivorId: SurvivorID; location: LocationID | 'colony' };
+     | { type: 'reveal'; playerId: PlayerID; location: LocationID; }
+     | { type: 'drawFromReveal'; playerId: PlayerID; card?: CardID[]; cards?: CardID[]; survivorId?: SurvivorID; location?: LocationID; }
+     | { type: 'vote'; initiatorId?: PlayerID; targetPlayerId?: PlayerID; issue?: string; votes?: Record<PlayerID, 'yes' | 'no'>; playerId?: PlayerID; }
+     | { type: 'resolveTriggerEffect'; playerId: PlayerID; effectDescription?: string; }
+     | { type: 'biteSpread'; survivorId: SurvivorID; location: LocationID | 'colony'; }
+     | { type: 'selectNewSurvivorPlacement'; playerId: PlayerID; newSurvivorId: SurvivorID; confirmedBy?: PlayerID[]; }
+     | { type: 'chooseNewLeader'; playerId: PlayerID; confirmedBy?: PlayerID[]; }
+     | { type: 'voteAdminAction'; adminPlayerId: PlayerID; description?: string; votes: Record<PlayerID, 'yes' | 'no'>; }
+     | { type: 'confirmPending'; pendingType: string; playerId: PlayerID; confirmedBy: PlayerID[]; };
 
 export interface GameLog {
-     player: PlayerID,
-     playerName: string,
-     reason: string,
+     player: PlayerID;
+     playerName: string;
+     reason: string;
      description: string;
 }

@@ -1,7 +1,7 @@
 import type { Ctx, PlayerID } from "boardgame.io";
+import type { INVALID_MOVE } from "boardgame.io/dist/types/src/core/constants.js";
 import type { EventsAPI } from "boardgame.io/dist/types/src/plugins/events/events.js";
 import type { RandomAPI } from "boardgame.io/dist/types/src/plugins/random/random.js";
-import type { INVALID_MOVE } from "boardgame.io/dist/types/src/core/constants.js";
 import type { CardID, ItemID, SurvivorID } from "../state/Card.js";
 import type { Skill } from "../state/Effect.js";
 import type { GameState } from "../state/GameState.js";
@@ -93,7 +93,8 @@ export interface LocationAction {
      addStarvation: MoveFunction<[amount: number]>;
      removeStarvation: MoveFunction<[amount: number]>;
 
-     spawnZombieAtColony: MoveFunction<[entranceIndex: number, amount: number]>;
+     spawnZombieAtColony: MoveFunction<[arg1?: number, arg2?: number]>;
+     spawnZombieAtColonyRoundRobin: MoveFunction<[amount: number]>;
      removeZombieAtColony: MoveFunction<[entranceIndex: number, amount: number]>;
 
      spawnZombieAtLocation: MoveFunction<[atLoc: LocationID, amount: number]>;
@@ -150,6 +151,33 @@ export interface GameAction {
 
      triggerPendingEffect: MoveFunction<[effectDescription: string]>;
      resolveTriggerEffect: MoveFunction<[choice: string]>;
+
+     startAdminTrigger: MoveFunction<[adminPlayerId: PlayerID, description?: string]>;
+     submitAdminAction: MoveFunction<[adminPlayerId: PlayerID]>;
+     castAdminVote: MoveFunction<[vote: 'yes' | 'no']>;
+     rollbackAdminSnapshot: MoveFunction<[]>;
+
+     resolveNewSurvivorPlacement: MoveFunction<[targetLocation: LocationID | 'colony']>;
+     resolveChooseLeader: MoveFunction<[newLeaderId: SurvivorID]>;
+     confirmPendingResolution: MoveFunction<[]>;
+}
+
+export interface PlayerActionGroup {
+     playerMoveSurvivor: MoveFunction<[survivorId: SurvivorID, to: LocationID | 'colony', useFuelCardId?: ItemID]>;
+     playerSpendFoodToken: MoveFunction<[dieIndex: number]>;
+     playerSpendFoodCard: MoveFunction<[foodCardId: ItemID, dieIndex: number]>;
+     playerPlayCard: MoveFunction<[cardId: ItemID, equipTargetSurvivorId?: SurvivorID]>;
+     playerContributeToCrisis: MoveFunction<[cardIds: ItemID[]]>;
+     playerHandOff: MoveFunction<[fromSurvivorId: SurvivorID, toSurvivorId: SurvivorID, itemId: ItemID]>;
+     playerAttackZombie: MoveFunction<[survivorId: SurvivorID, dieIndex: number, entranceIndex?: number]>;
+     playerAttackSurvivor: MoveFunction<[attackerSurvivorId: SurvivorID, targetSurvivorId: SurvivorID, dieIndex: number]>;
+     playerSearch: MoveFunction<[survivorId: SurvivorID, dieIndex: number]>;
+     playerSearchMakeNoise: MoveFunction<[]>;
+     playerFinishSearch: MoveFunction<[keptCardId: ItemID]>;
+     playerBarricade: MoveFunction<[survivorId: SurvivorID, dieIndex: number, entranceIndex?: number]>;
+     playerCleanWaste: MoveFunction<[dieIndex: number]>;
+     playerAttractZombies: MoveFunction<[survivorId: SurvivorID, dieIndex: number, sources: Array<{ location: LocationID | 'colony'; entranceIndex?: number }>]>;
+     playerRequestCard: MoveFunction<[fromPlayerId: PlayerID, cardId: ItemID]>;
 }
 
 export type { GamePhase, GamePhaseType } from "../state/GamePhase.js";

@@ -2,7 +2,20 @@ import type { MoveContext } from "./Action.js";
 import type { LocationID } from "../state/Location.js";
 import type { ItemID, SurvivorID } from "../state/Card.js";
 import type { WoundType } from "../state/Survivor.js";
+import type { PassiveEffectTag } from "../state/Effect.js";
 import { INVALID_MOVE } from "boardgame.io/core";
+import { SURVIVOR_CATALOG } from "../gameSetup/GameSetup.js";
+import { changeMorale } from "./GameScaleLogic.js";
+import { putCardToDeck, addCardToHand } from "./DeckLogic.js";
+
+export function hasSurvivorPassive(survivorId: SurvivorID, tag: PassiveEffectTag): boolean {
+    const info = SURVIVOR_CATALOG[survivorId];
+    if (!info || !info.skill || !info.skill.passiveEffect) return false;
+    return info.skill.passiveEffect.some((p: any) => {
+        if (typeof p === 'string') return p === tag;
+        return typeof p === 'object' && p !== null && 'type' in p && p.type === tag;
+    });
+}
 
 export const moveSurvivor = ({ G }: MoveContext, survivorId: SurvivorID, to: LocationID | 'colony') => {
     const survivor = G.public.survivorInfo[survivorId];
@@ -41,7 +54,7 @@ export const moveSurvivor = ({ G }: MoveContext, survivorId: SurvivorID, to: Loc
 /**
  * Đặt Survivor lên bàn chơi (Spawn).
  * LƯU Ý: Đây là hành động nguyên tử thuần túy để đưa survivor vào map & gán cho player.
- * KHÔNG tự ý can thiệp vào Morale (Morale do GameAction/người chơi điều khiển riêng).
+ * KHÔNG tự ý can thiệp vào Morale.
  */
 export const spawnSurvivor = ({ G }: MoveContext, survivorId: SurvivorID, playerId: string, atLoc: LocationID | 'colony') => {
     const player = G.public.players[playerId];
@@ -79,14 +92,10 @@ export const spawnSurvivor = ({ G }: MoveContext, survivorId: SurvivorID, player
     }
 };
 
-/**
- * Gỡ hoàn toàn Survivor khỏi bàn chơi (board) và danh sách của Player (nguyên tử)
- */
 export const removeSurvivor = ({ G }: MoveContext, survivorId: SurvivorID) => {
     const survivor = G.public.survivorInfo[survivorId];
     if (!survivor) return INVALID_MOVE;
 
-    // Giảm số đếm vị trí
     if (survivor.location === 'colony') {
         G.public.colony.survivor = Math.max(0, G.public.colony.survivor - 1);
     } else {
@@ -94,7 +103,6 @@ export const removeSurvivor = ({ G }: MoveContext, survivorId: SurvivorID) => {
         if (loc) loc.survivorNumber = Math.max(0, loc.survivorNumber - 1);
     }
 
-    // Xóa khỏi danh sách player
     const player = G.public.players[survivor.belongPlayer];
     if (player) {
         const idx = player.survivorList.indexOf(survivorId);
@@ -116,10 +124,88 @@ export const markAsNotMoved = ({ G }: MoveContext, survivorId: SurvivorID) => {
     survivor.hasMoved = false;
 };
 
-export const receiveWound = ({ G }: MoveContext, survivorId: SurvivorID, wound: WoundType) => {
+export function handleSurvivorDeath(context: MoveContext, survivorId: SurvivorID): void {
+    const { G } = context;
+    const survivor = G.public.survivorInfo[survivorId];
+    if (!survivor) return;
+
+    const belongPlayer = survivor.belongPlayer;
+    const loc = survivor.location;
+    const player = G.public.players[belongPlayer];
+
+    // 1. Giảm Morale nếu người chơi không bị Exile
+    if (!player?.isExiled) {
+        changeMorale(context, -1);
+    }
+
+    // 2. Chuyển thẻ bài nhân vật sang removedSurvivor deck
+    putCardToDeck(context, 'removedSurvivor', [survivorId], 'top');
+
+    // 3. Rơi trang bị: Colony -> về tay người chơi; Ngoài Colony -> shuffle vào cọc bài địa điểm đó
+    if (survivor.equippedItems && survivor.equippedItems.length > 0) {
+        const items = [...survivor.equippedItems];
+        if (loc === 'colony') {
+            addCardToHand(context, belongPlayer, items);
+        } else {
+            putCardToDeck(context, loc, items, 'shuffle');
+        }
+    }
+
+    // 4. Gỡ survivor khỏi board
+    removeSurvivor(context, survivorId);
+
+    // 5. Kiểm tra luật Survivor cuối cùng chết (GAME_RULE.md dòng 170-172)
+    if (player && player.survivorList.length === 0) {
+        // Mất toàn bộ bài trên tay khỏi game
+        const privPl = G.private.players[belongPlayer];
+        if (privPl && privPl.hand.length > 0) {
+            putCardToDeck(context, 'removedItem', [...privPl.hand], 'bottom');
+            privPl.hand = [];
+            player.handSize = 0;
+        }
+
+        // Rút 1 survivor mới từ survivorDeck
+        if (G.private.survivorDeck.cards.length > 0) {
+            const newSurvivorId = G.private.survivorDeck.cards.shift()!;
+            player.groupLeader = newSurvivorId;
+            G.public.pending = {
+                type: 'selectNewSurvivorPlacement',
+                playerId: belongPlayer,
+                newSurvivorId,
+                confirmedBy: []
+            };
+            G.public.previousLog = {
+                player: belongPlayer,
+                playerName: player.playerName,
+                reason: "Last Survivor Killed",
+                description: `${SURVIVOR_CATALOG[survivorId]?.name || survivorId} was last survivor! Hand cards removed. Drew new survivor: ${SURVIVOR_CATALOG[newSurvivorId]?.name || newSurvivorId}. Location selection pending.`
+            };
+        }
+    } else if (player && player.groupLeader === survivorId) {
+        // 6. Nếu leader chết nhưng vẫn còn survivor khác
+        G.public.pending = {
+            type: 'chooseNewLeader',
+            playerId: belongPlayer,
+            confirmedBy: []
+        };
+    }
+}
+
+export const receiveWound = (context: MoveContext, survivorId: SurvivorID, wound: WoundType) => {
+    const { G } = context;
     const survivor = G.public.survivorInfo[survivorId];
     if (!survivor) return INVALID_MOVE;
-    survivor.wound.push(wound);
+
+    let woundToAdd = wound;
+    if (wound === 'frostbite' && hasSurvivorPassive(survivorId, 'CHANGE_FROSTBITE_TO_WOUND')) {
+        woundToAdd = 'wound';
+    }
+    survivor.wound.push(woundToAdd);
+
+    const maxHp = SURVIVOR_CATALOG[survivorId]?.hp ?? 3;
+    if (survivor.wound.length >= maxHp) {
+        handleSurvivorDeath(context, survivorId);
+    }
 };
 
 export const removeWound = ({ G }: MoveContext, survivorId: SurvivorID, wound: WoundType, amount: number) => {
@@ -187,3 +273,4 @@ export const killHelplessSurvivor = ({ G }: MoveContext, amount: number) => {
     G.public.colony.helpless -= killed;
     G.public.morale = Math.max(0, G.public.morale - killed);
 };
+

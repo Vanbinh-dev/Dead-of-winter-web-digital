@@ -36,7 +36,7 @@ export const SURVIVOR_CATALOG: Record<SurvivorID, SurvivorInfo> = {
         searchIndex: 4,
         powerIndex: 2,
         skillDescription: "Do not roll exposure dice when attacking.",
-        skill: { condition: [], cost: [], activeEffect: [], passiveEffect: [] }
+        skill: { condition: [], cost: [], activeEffect: [], passiveEffect: ['NO_EXPOSURE_WHEN_ATTACK'] }
     },
     sparky: {
         id: "sparky",
@@ -47,7 +47,17 @@ export const SURVIVOR_CATALOG: Record<SurvivorID, SurvivorInfo> = {
         searchIndex: 4,
         powerIndex: 2,
         skillDescription: "Ignore bite spread. When getting bite, place 1 wound instead. Does not roll exposure when moving or attacking.",
-        skill: { condition: [], cost: [], activeEffect: [], passiveEffect: [] }
+        skill: {
+            condition: [],
+            cost: [],
+            activeEffect: [],
+            passiveEffect: [
+                'IGNORE_BITE_SPREADING',
+                'CHANGE_BITE_TO_WOUND',
+                'NO_EXPOSURE_WHEN_ATTACK',
+                'NO_EXPOSURE_WHEN_MOVING'
+            ]
+        }
     },
     loretta_clay: {
         id: "loretta_clay",
@@ -261,6 +271,8 @@ export function setupInitialGame(numPlayers: number = 1): GameState {
             playerName: `Player ${pId}`,
             survivorList: mySurvivors,
             handSize: myHand.length,
+            isExiled: false,
+            groupLeader: mySurvivors[0] ?? null,
             die: {
                 unused: [3, 4, 5],
                 used: []

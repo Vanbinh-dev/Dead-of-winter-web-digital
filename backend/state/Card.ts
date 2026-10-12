@@ -61,6 +61,17 @@ export interface ExileObjectiveInfo {
 export interface CrisisCardInfo {
      id: CrisisID;
 
-     symbolRequired: Symbol[];
+     symbolRequired: ItemSymbol[];
      failEffect: ActiveEffect[];
+}
+
+export interface CrossroadCardInfo {
+     id: CrossroadID;
+     name: string;
+     triggerCondition: Condition; // PLAYER_TRIGGER
+     triggerDescription: string;
+     options: {
+         text: string;
+         effects: ActiveEffect[];
+     }[];
 }
