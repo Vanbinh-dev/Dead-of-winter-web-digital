@@ -1,0 +1,203 @@
+/* ==========================================================================
+   LOCATIONS & TOKENS STYLESHEET (DEAD OF WINTER)
+   Tuân thủ nghiêm ngặt VISUAL.md (CSS variables on :root & data-* attributes)
+   ========================================================================== */
+
+:root {
+  /* --- Kích thước và Tỉ lệ Location --- */
+  --colony-aspect-ratio: 1635 / 962;
+  --grocery-aspect-ratio: 1001 / 1570;
+
+  --location-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --location-border-radius: 10px;
+
+  /* --- Kích thước Token tương đối --- */
+  --token-colony-zombie-size: 4.8%;    /* Tỉ lệ so với chiều rộng Colony */
+  --token-colony-occupant-size: 4.2%;
+  --token-colony-food-size: 5.6%;
+
+  --token-grocery-survivor-size: 15.5%; /* Tỉ lệ so với chiều rộng Grocery */
+  --token-grocery-zombie-size: 13.8%;
+  --token-grocery-noise-size: 9.5%;
+
+  /* --- Hiệu ứng Animation Placement --- */
+  --anim-placement-duration: 220ms;
+  --anim-placement-easing: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* ==========================================================================
+   1. KHUNG CHỨA TOÀN BỘ CÁC LOCATION TRÊN MÀN HÌNH CHÍNH
+   ========================================================================== */
+
+.locations-stage-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-xl);
+  padding: var(--space-lg);
+  max-width: 1400px;
+  margin: 0 auto;
+  user-select: none;
+  min-height: calc(100vh - 120px);
+}
+
+/* Khung bọc từng Location Board */
+.location-board-wrapper {
+  position: relative;
+  border-radius: var(--location-border-radius);
+  box-shadow: var(--location-shadow);
+  overflow: hidden;
+  background-color: var(--color-surface);
+  border: 3px solid var(--color-border-dark);
+}
+
+.location-board-wrapper.colony-board {
+  flex: 2.2;
+  aspect-ratio: var(--colony-aspect-ratio);
+  max-height: 520px;
+}
+
+.location-board-wrapper.grocery-board {
+  flex: 1;
+  aspect-ratio: var(--grocery-aspect-ratio);
+  max-height: 520px;
+}
+
+/* Hình nền bản đồ gốc */
+.location-bg-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   2. CÁC Ô ĐẶT TOKEN (SLOTS)
+   ========================================================================== */
+
+.location-slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+
+.location-slot:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  filter: drop-shadow(0 0 6px var(--color-accent));
+}
+
+/* Ô có thể nhận token (Interactive Affordance) */
+.location-slot.is-valid-target {
+  box-shadow: 0 0 8px var(--color-badge-border);
+}
+
+/* ==========================================================================
+   3. SPRITE CỦA TOKEN VÀ DIỄN HOẠ ĐẶT VÀO (PLACEMENT ANIMATION)
+   ========================================================================== */
+
+.board-token-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+  animation: tokenDropIn var(--anim-placement-duration) var(--anim-placement-easing);
+  will-change: transform;
+}
+
+/* Hiệu ứng thả rơi vào ô (Snap & Drop) */
+@keyframes tokenDropIn {
+  from {
+    transform: scale(1.4) translateY(-8px);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Survivor Token tròn có Avatar hoặc Nhãn hiệu nhân vật */
+.board-survivor-token {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: radial-gradient(circle, #3b82f6 0%, #1e3a8a 100%);
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-main);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  animation: tokenDropIn var(--anim-placement-duration) var(--anim-placement-easing);
+}
+
+.board-survivor-token-name {
+  font-size: 9px;
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  line-height: 1;
+  padding: 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%;
+}
+
+.board-survivor-token-badge {
+  font-size: 8px;
+  opacity: 0.9;
+  margin-top: 1px;
+}
+
+/* Barricade đè lên ô Biohazard */
+.board-token-barricade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  transform: scale(1.15);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+  animation: tokenDropIn var(--anim-placement-duration) var(--anim-placement-easing);
+}
+
+/* Token Tiếng Ồn (Noise) */
+.board-token-noise {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: #ea580c;
+  border: 1.5px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 11px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  animation: tokenDropIn var(--anim-placement-duration) var(--anim-placement-easing);
+}
+
+/* Badge số lượng cho Food Supply */
+.food-count-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: var(--color-badge-bg);
+  border: 1.5px solid var(--color-badge-border);
+  color: var(--color-badge-text);
+  font-size: 10px;
+  font-weight: var(--font-weight-black);
+  padding: 1px 4px;
+  border-radius: var(--radius-full);
+}
+

@@ -1,0 +1,246 @@
+/* ==========================================================================
+   GLOBAL THEME VARIABLES (BẮT BUỘC THEO CHUẨN VISUAL.MD - GOLDEN RULE #8)
+   ========================================================================== */
+
+:root {
+  /* --- 1. Color Palette --- */
+  --color-bg: #ffffff;                       /* Nền trang màu trắng theo yêu cầu */
+  --color-surface: #383b40;                  /* Khung chữ nhật của panel hành động */
+  --color-surface-slot: #4a4e54;             /* Nền ô vuông hành động nhỏ */
+  --color-surface-slot-hover: #5b6068;       /* Nền ô vuông khi hover */
+  --color-border-dark: #1a1c1e;              /* Viền đen đậm phong cách vẽ tay */
+  --color-border-subtle: #23262a;            /* Viền ô vuông nhỏ */
+
+  --color-text: #1a1a2e;                     /* Chữ chính trên nền sáng */
+  --color-text-on-dark: #f8fafc;             /* Chữ chính trên nền tối */
+  --color-text-muted: #94a3b8;               /* Chữ phụ */
+
+  --color-accent: #f59e0b;                   /* Màu ô đang chọn (Selected amber) */
+  --color-accent-border: #ffffff;            /* Viền ô khi chọn */
+
+  --color-cancel: #b91c1c;                   /* Màu đỏ nút vuông chữ X hủy */
+  --color-cancel-hover: #dc2626;             /* Màu đỏ khi hover */
+  --color-cancel-border: #450a0a;            /* Viền nút đỏ */
+
+  --color-badge-bg: #1e3a34;                 /* Nền badge số chi phí */
+  --color-badge-border: #22c55e;             /* Viền badge xanh lá */
+  --color-badge-text: #f0fdf4;               /* Chữ badge */
+
+  /* --- 2. Typography --- */
+  --font-main: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+
+  --font-size-xs: 0.75rem;   /* 12px */
+  --font-size-sm: 0.875rem;  /* 14px */
+  --font-size-md: 1rem;      /* 16px */
+  --font-size-lg: 1.25rem;   /* 20px */
+  --font-size-xl: 1.5rem;    /* 24px */
+  --font-size-2xl: 2.25rem;  /* 36px */
+  --font-size-x-large: 3.25rem; /* 52px cho chữ X */
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --font-weight-black: 900;
+
+  /* --- 3. Spacing --- */
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 6px;
+  --space-md: 8px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  /* --- 4. Dimensions --- */
+  --panel-border-width: 4px;
+  --slot-border-width: 2px;
+  --slot-size: 44px;
+  --main-button-size: 94px;
+  --badge-size: 18px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-full: 9999px;
+
+  /* --- 5. Transitions & Timing --- */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --transition-bounce: 180ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* --- 6. Shadows --- */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow-glow-amber: 0 0 12px rgba(245, 158, 11, 0.8);
+  --shadow-glow-red: 0 6px 16px rgba(185, 28, 28, 0.5);
+}
+
+/* ==========================================================================
+   PLAYER ACTION PANEL STYLES (ĐỐI CHIẾU 100% VỚI CÁC BIẾN TRÊN :ROOT)
+   ========================================================================== */
+
+.action-dock-container {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-xl);
+  z-index: 1100;
+  display: flex;
+  align-items: flex-end;
+  user-select: none;
+}
+
+/* Khung chữ nhật bao quanh */
+.action-box-panel {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  border: var(--panel-border-width) solid var(--color-border-dark);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+  gap: var(--space-md);
+  box-shadow: var(--shadow-panel);
+  transition: all var(--transition-normal);
+}
+
+/* Lưới các ô vuông hành động (2 hàng) */
+.action-slots-grid {
+  display: grid;
+  grid-template-rows: repeat(2, var(--slot-size));
+  grid-auto-flow: column;
+  grid-auto-columns: var(--slot-size);
+  gap: var(--space-sm);
+}
+
+/* Từng ô vuông hành động */
+.action-slot-item {
+  width: var(--slot-size);
+  height: var(--slot-size);
+  background: var(--color-surface-slot);
+  border: var(--slot-border-width) solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.action-slot-item:hover {
+  background: var(--color-surface-slot-hover);
+  border-color: var(--color-text-on-dark);
+  transform: translateY(-2px);
+}
+
+.action-slot-item:active {
+  transform: translateY(1px);
+}
+
+/* Trạng thái ô đang được chọn */
+.action-slot-item.is-selected {
+  background: var(--color-accent);
+  border-color: var(--color-accent-border);
+  box-shadow: var(--shadow-glow-amber);
+  transform: translateY(-3px) scale(1.05);
+}
+
+/* Biểu tượng trong ô */
+.action-slot-icon {
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Badge chi phí / số lượng */
+.action-slot-badge {
+  position: absolute;
+  bottom: calc(-1 * var(--space-2xs));
+  right: calc(-1 * var(--space-2xs));
+  background: var(--color-badge-bg);
+  border: 1.5px solid var(--color-badge-border);
+  color: var(--color-badge-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-black);
+  width: var(--badge-size);
+  height: var(--badge-size);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ==========================================================================
+   NÚT VUÔNG LỚN Ở MÉP PHẢI (TOGGLE / BIG RED 'X' CANCEL)
+   ========================================================================== */
+
+.action-main-button {
+  width: var(--main-button-size);
+  height: var(--main-button-size);
+  border-radius: var(--radius-md);
+  border: 3px solid var(--color-border-dark);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-bounce);
+  position: relative;
+  padding: 0;
+}
+
+.action-main-button:hover {
+  transform: scale(1.03);
+}
+
+.action-main-button:active {
+  transform: scale(0.97);
+}
+
+/* 1. Trạng thái cơ bản: Nút vuông đóng/mở panel */
+.action-main-button.is-toggle-state {
+  background: var(--color-surface-slot);
+  color: var(--color-text-on-dark);
+}
+
+.action-main-button.is-toggle-state:hover {
+  background: var(--color-surface-slot-hover);
+}
+
+.action-toggle-icon {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.action-toggle-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  margin-top: var(--space-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 2. Trạng thái ĐÃ CHỌN HÀNH ĐỘNG: Nút vuông đỏ rực với CHỮ X LỚN TRẮNG */
+.action-main-button.is-cancel-state {
+  background: var(--color-cancel);
+  border-color: var(--color-cancel-border);
+  box-shadow: var(--shadow-glow-red);
+}
+
+.action-main-button.is-cancel-state:hover {
+  background: var(--color-cancel-hover);
+}
+
+.action-big-x {
+  color: var(--color-text-on-dark);
+  font-size: var(--font-size-x-large);
+  font-weight: var(--font-weight-black);
+  line-height: 1;
+  text-shadow: 2px 2px 0px var(--color-cancel-border), -2px -2px 0px var(--color-cancel-border), 2px -2px 0px var(--color-cancel-border), -2px 2px 0px var(--color-cancel-border);
+  letter-spacing: -2px;
+}
+

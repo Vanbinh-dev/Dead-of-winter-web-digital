@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Dead of Winter - Sandbox Tester</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 12px; background: #f4f6f8; color: #222; }
+    h2, h3, h4 { margin: 4px 0 8px 0; }
+    button { cursor: pointer; padding: 4px 8px; border-radius: 4px; border: 1px solid #aaa; background: #fff; font-size: 13px; }
+    button:hover { background: #e8e8e8; }
+    button.primary { background: #2563eb; color: #fff; border-color: #1d4ed8; font-weight: bold; }
+    button.primary:hover { background: #1d4ed8; }
+    button.danger { background: #ef4444; color: #fff; border-color: #dc2626; font-weight: bold; }
+    button.danger:hover { background: #dc2626; }
+    button.success { background: #10b981; color: #fff; border-color: #059669; font-weight: bold; }
+    button.success:hover { background: #059669; }
+    select, input { padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    .panel { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .badge-die { background: #e0e7ff; color: #3730a3; margin-right: 4px; }
+    .badge-used { background: #fee2e2; color: #991b1b; margin-right: 4px; }
+    .action-group { border-top: 1px solid #eee; padding-top: 8px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <!-- Giao diện khởi tạo Lobby -->
+  <div id="lobby-section" class="panel" style="max-width: 480px; margin: 40px auto; text-align: center;">
+    <h2>Dead of Winter - Sandbox Tester</h2>
+    <p style="color: #666; font-size: 14px;">Môi trường thử nghiệm trực quan cho Tester & Pair Programming</p>
+    <div style="margin: 20px 0;">
+      <button id="btn-create-host" class="primary" style="padding: 8px 16px; font-size: 15px;">Tạo Host Mới (Local Solo Tester)</button>
+    </div>
+    <div class="row" style="justify-content: center;">
+      <input type="text" id="input-match-id" placeholder="Nhập match_id để join" />
+      <button id="btn-join">Join</button>
+    </div>
+    <p id="lobby-message" style="margin-top: 12px; font-weight: bold; color: #2563eb;"></p>
+  </div>
+
+  <!-- Giao diện Game Tester chia 3 cột -->
+  <div id="game-section" style="display: none;">
+    <!-- Top bar -->
+    <div class="panel" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div>
+        <strong>Match:</strong> <span id="info-match-id" style="color: #2563eb;">-</span> |
+        <strong>Player:</strong> <span id="info-player-id">0</span> |
+        <strong>Turn:</strong> <span id="info-current-player">-</span> |
+        <strong>Phase:</strong> <span id="info-phase">-</span>
+      </div>
+      <div>
+        <strong>Morale:</strong> <span id="stat-morale" style="color: #dc2626; font-size: 16px; font-weight: bold;">8</span> |
+        <strong>Round:</strong> <span id="stat-round" style="color: #059669; font-size: 16px; font-weight: bold;">6</span> |
+        <strong>Food:</strong> <span id="stat-food">0</span> |
+        <strong>Waste:</strong> <span id="stat-waste">0</span> lá |
+        <strong>Starvation:</strong> <span id="stat-starvation">0</span>
+      </div>
+    </div>
+
+    <!-- PENDING ACTION & TRIGGER BANNER -->
+    <div id="pending-action-banner" style="display: none; background: #fff1f2; border: 2px solid #e11d48; border-radius: 6px; padding: 12px; margin-bottom: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+      <div class="row" style="justify-content: space-between; align-items: center;">
+        <strong id="pending-title" style="color: #be123c; font-size: 15px;">⚠️ PENDING ACTION</strong>
+        <span id="pending-type-badge" class="badge" style="background: #e11d48; color: #fff;">TYPE</span>
+      </div>
+      <div id="pending-description" style="margin: 8px 0; font-size: 13px; color: #4c0519;"></div>
+      <div id="pending-controls-container" class="row" style="gap: 8px;"></div>
+    </div>
+
+    <!-- 3 Panels chính -->
+    <div style="display: grid; grid-template-columns: 320px 1fr 400px; gap: 12px;">
+      
+      <!-- Cột Trái: Thông tin Người chơi & Survivor -->
+      <div class="panel" style="overflow-y: auto; max-height: 740px;">
+        <h3>1. Player Info & Survivors</h3>
+        
+        <div style="margin-bottom: 12px;">
+          <h4>Action Dice:</h4>
+          <div>Unused (chưa dùng): <span id="dice-unused-container"></span></div>
+          <div style="margin-top: 4px;">Used (đã dùng): <span id="dice-used-container"></span></div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <h4>Hand Cards (<span id="hand-count">0</span>):</h4>
+          <div id="hand-cards-list" style="font-size: 13px; max-height: 120px; overflow-y: auto; border: 1px solid #eee; padding: 4px;"></div>
+        </div>
+
+        <div>
+          <h4>Controlled Survivors:</h4>
+          <div id="survivors-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+
+        <div style="margin-top: 14px; border-top: 1px dashed #ccc; padding-top: 8px;">
+          <h4 style="color: #64748b;">Đã bị loại (Removed Survivors):</h4>
+          <div id="removed-survivors-list" style="font-size: 12px; color: #475569;"><em>(Trống)</em></div>
+        </div>
+      </div>
+
+      <!-- Cột Giữa: Hiển thị 1 Địa điểm với bộ chọn Selector -->
+      <div class="panel" style="overflow-y: auto; max-height: 740px;">
+        <div class="row" style="justify-content: space-between;">
+          <h3>2. Location View</h3>
+          <div class="row">
+            <label for="select-location" style="font-weight: bold;">Chọn địa điểm:</label>
+            <select id="select-location" style="font-weight: bold; min-width: 150px;">
+              <option value="colony">Colony</option>
+              <option value="policeStation">Police Station</option>
+              <option value="groceryStore">Grocery Store</option>
+              <option value="school">School</option>
+              <option value="library">Library</option>
+              <option value="hospital">Hospital</option>
+              <option value="gasStation">Gas Station</option>
+            </select>
+          </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0 16px 0;">
+
+        <!-- Chi tiết địa điểm được chọn -->
+        <div id="location-detail-container"></div>
+      </div>
+
+      <!-- Cột Phải: Bảng điều khiển Hành động (Sandbox Actions & Admin Deck Explorer) -->
+      <div class="panel" style="overflow-y: auto; max-height: 740px;">
+        <h3>3. Action Controls & Sandbox</h3>
+
+        <!-- ĐIỀU KHIỂN GAME PHASES (4 PHASES THEO LUẬT CHƠI) -->
+        <div class="action-group" style="background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 4px; padding: 8px;">
+          <div class="row" style="justify-content: space-between;">
+            <strong style="color: #86198f;">⚡ Game Phase Controls:</strong>
+            <span id="badge-current-phase" class="badge" style="background: #c084fc; color: #fff;">playerPhase</span>
+          </div>
+
+          <!-- Phase 1: beforeGameStart -->
+          <div style="font-size: 11px; font-weight: bold; color: #701a75; margin-top: 6px;">1. Before Game Start:</div>
+          <div class="row">
+            <button id="btn-phase-choose-leader" class="secondary" title="Chọn Survivor được chọn làm Group Leader">Set Leader</button>
+            <button id="btn-phase-start-game" class="success" title="Chỉ định First Player & bắt đầu game">Start Game</button>
+          </div>
+
+          <!-- Phase 2: startRound -->
+          <div style="font-size: 11px; font-weight: bold; color: #701a75; margin-top: 6px;">2. Start Round Phase:</div>
+          <div class="row">
+            <button id="btn-phase-reveal-crisis" class="primary">Reveal Crisis</button>
+            <button id="btn-phase-roll-dice" class="primary">Roll Round Dice</button>
+            <button id="btn-phase-start-player-phase" class="success">Start Player Phase</button>
+          </div>
+
+          <!-- Phase 3: playerPhase -->
+          <div style="font-size: 11px; font-weight: bold; color: #701a75; margin-top: 6px;">3. Player Turn Actions:</div>
+          <div class="row">
+            <button id="btn-phase-start-turn" title="Bắt đầu lượt & giải quyết Frostbite">Start Turn (Frostbite)</button>
+            <button id="btn-phase-end-turn" class="danger" title="Kết thúc lượt, chuyển người tiếp theo hoặc sang Colony Phase">End Player Turn</button>
+          </div>
+          <div class="row" style="margin-top: 4px;">
+            <button id="btn-phase-search-noise" title="Tìm kiếm & thêm tiếng ồn">Search (+Noise)</button>
+            <button id="btn-phase-finish-search" title="Hoàn tất tìm kiếm">Finish Search</button>
+            <button id="btn-phase-attack-survivor" title="Tấn công Survivor khác tại cùng địa điểm">Attack Survivor</button>
+          </div>
+
+          <!-- Phase 4: colonyPhase -->
+          <div style="font-size: 11px; font-weight: bold; color: #701a75; margin-top: 6px;">4. Colony Phase (Quy trình 6 bước):</div>
+          <div class="row">
+            <button id="btn-phase-pay-food" title="Bước 1: Trả food hoặc nhận Starvation">1. Pay Food</button>
+            <button id="btn-phase-check-waste" title="Bước 2: Kiểm tra bãi rác">2. Check Waste</button>
+            <button id="btn-phase-resolve-crisis" title="Bước 3: Giải quyết Crisis">3. Resolve Crisis</button>
+          </div>
+          <div class="row" style="margin-top: 4px;">
+            <button id="btn-phase-add-zombies" title="Bước 4: Thêm zombie & xử lý noise">4. Add Zombies & Noise</button>
+            <button id="btn-phase-check-obj" title="Bước 5: Kiểm tra mục tiêu chính">5. Check Objective</button>
+            <button id="btn-phase-advance-round" title="Bước 6: Giảm round tracker">6. Advance Round</button>
+          </div>
+          <div class="row" style="margin-top: 4px;">
+            <button id="btn-phase-pass-first-player" class="warning" style="flex: 1;" title="Bước 7: Chuyển First Player & sang startRound">7. Pass First Player Token</button>
+            <button id="btn-phase-run-full-colony" class="danger" style="flex: 1;" title="Chạy tự động toàn bộ 7 bước Colony Phase">⚡ Run Full Colony</button>
+          </div>
+        </div>
+
+        <!-- Chọn ngữ cảnh Survivor -->
+        <div class="row">
+          <label style="font-weight: bold;">Chọn Survivor:</label>
+          <select id="action-select-survivor" style="flex: 1;"></select>
+        </div>
+
+        <!-- Nhóm Di chuyển & Rào chắn -->
+        <div class="action-group">
+          <strong>Survivor & Map:</strong>
+          <div class="row" style="margin-top: 4px;">
+            <select id="move-target-location" style="flex: 1;">
+              <option value="colony">Colony</option>
+              <option value="policeStation">Police Station</option>
+              <option value="groceryStore">Grocery Store</option>
+              <option value="school">School</option>
+              <option value="library">Library</option>
+              <option value="hospital">Hospital</option>
+              <option value="gasStation">Gas Station</option>
+            </select>
+            <button id="btn-act-move">Move</button>
+          </div>
+          <div class="row">
+            <button id="btn-act-mark-moved">Mark Moved</button>
+            <button id="btn-act-unmark-moved">Undo (Not Moved)</button>
+          </div>
+        </div>
+
+        <!-- Nhóm Vết thương & Quản lý sống/chết (Nguyên tử hóa hoàn toàn) -->
+        <div class="action-group">
+          <strong>Wounds & Life:</strong>
+          <div class="row">
+            <button id="btn-act-add-wound">+ Wound</button>
+            <button id="btn-act-add-frostbite">+ Frostbite</button>
+            <button id="btn-act-remove-wound">Heal 1</button>
+            <button id="btn-act-clear-wounds">Clear All</button>
+          </div>
+          <div class="row" style="margin-top: 4px;">
+            <button id="btn-act-remove-survivor" class="danger">Remove Survivor</button>
+          </div>
+          
+          <!-- Hồi sinh / Đưa nhân vật trở lại bàn chơi bằng chuỗi thao tác nguyên tử -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; margin-top: 6px;">
+            <div style="font-size: 12px; font-weight: bold; color: #0f172a; margin-bottom: 4px;">Tái sinh / Đặt Survivor lên Map (Spawn Survivor):</div>
+            <div class="row">
+              <select id="select-spawn-survivor" style="flex: 1;"></select>
+              <select id="select-spawn-location">
+                <option value="colony">Colony</option>
+                <option value="policeStation">Police Station</option>
+                <option value="groceryStore">Grocery Store</option>
+                <option value="school">School</option>
+                <option value="library">Library</option>
+                <option value="hospital">Hospital</option>
+                <option value="gasStation">Gas Station</option>
+              </select>
+            </div>
+            <div class="row" style="margin-top: 4px;">
+              <button id="btn-act-spawn-survivor" class="success" style="flex: 1;">Spawn Survivor to Map</button>
+              <button id="btn-act-put-survivor-deck" title="Trả lại vào survivorDeck">Put to Deck</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nhóm Zombie & Barricade nguyên tử (Tôn trọng maxZombieCapacity = 3) -->
+        <div class="action-group">
+          <strong>Zombies & Barricades (Slot max 3):</strong>
+          <div class="row">
+            <label>Cổng Colony (1-6):</label>
+            <select id="act-colony-entrance">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+              <option value="4">4</option><option value="5">5</option><option value="6">6</option>
+            </select>
+          </div>
+          <div class="row">
+            <button id="btn-act-spawn-zombie">+1 Zombie</button>
+            <button id="btn-act-remove-zombie">-1 Zombie</button>
+            <button id="btn-act-build-barricade">+1 Barricade</button>
+            <button id="btn-act-remove-barricade">-1 Barricade</button>
+          </div>
+          <div class="row">
+            <button id="btn-act-add-noise">+1 Noise</button>
+            <button id="btn-act-remove-noise">-1 Noise</button>
+          </div>
+        </div>
+
+        <!-- Nhóm Xúc xắc hành động (Dice Controls) -->
+        <div class="action-group">
+          <strong>Action Dice Controls:</strong>
+          <div class="row">
+            <button id="btn-act-add-die" class="primary">+1 Action Die</button>
+            <button id="btn-act-reroll-all-dice">Reroll All Dice</button>
+            <button id="btn-act-roll-d6">Roll D6</button>
+            <button id="btn-act-roll-exposure">Roll Exposure</button>
+          </div>
+          <div class="row" style="margin-top: 4px;">
+            <label>Chọn die [index]:</label>
+            <input type="number" id="input-die-index" value="0" min="0" max="9" style="width: 50px;" />
+            <button id="btn-act-reroll-one-die">Đổ lại 1 viên</button>
+            <button id="btn-act-used-to-unused">Used -> Unused</button>
+            <button id="btn-act-unused-to-used">Unused -> Used</button>
+          </div>
+        </div>
+
+        <!-- Nhóm Tài nguyên & Helpless Survivors -->
+        <div class="action-group">
+          <strong>Tài nguyên & Helpless Survivors:</strong>
+          <div class="row">
+            <button id="btn-act-add-helpless" class="danger">+1 Helpless</button>
+            <button id="btn-act-remove-helpless">-1 Helpless</button>
+            <button id="btn-act-add-food">+1 Food</button>
+            <button id="btn-act-remove-food">-1 Food</button>
+            <button id="btn-act-add-starv">+1 Starv</button>
+            <button id="btn-act-remove-starv">-1 Starv</button>
+          </div>
+          <div class="row">
+            <button id="btn-act-inc-morale">+1 Morale</button>
+            <button id="btn-act-dec-morale">-1 Morale</button>
+            <button id="btn-act-dec-round">-1 Round</button>
+          </div>
+        </div>
+
+        <!-- CÔNG CỤ ADMIN DECK & TRA CỨU THẺ BÀI -->
+        <div class="action-group" style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 8px;">
+          <strong style="color: #1e40af;">🃏 Deck Explorer & Admin Deck Controls:</strong>
+          
+          <!-- Lựa chọn Deck & Tra cứu thẻ bài -->
+          <div class="row" style="margin-top: 6px;">
+            <label style="font-size: 12px; font-weight: bold;">Chọn Deck:</label>
+            <select id="admin-select-deck" style="flex: 1;">
+              <option value="survivor">survivorDeck</option>
+              <option value="removedSurvivor">removedSurvivor</option>
+              <option value="starterItem">starterItemDeck</option>
+              <option value="waste">waste (Bãi rác Colony)</option>
+              <option value="removedItem">removedItem</option>
+              <option value="policeStation">policeStation</option>
+              <option value="groceryStore">groceryStore</option>
+              <option value="school">school</option>
+              <option value="library">library</option>
+              <option value="hospital">hospital</option>
+              <option value="gasStation">gasStation</option>
+              <option value="crisis">crisisDeck</option>
+              <option value="crisisContribution">crisisContribution</option>
+              <option value="crossroad">crossroadDeck</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <input type="text" id="admin-search-card" placeholder="Gõ tên hoặc Card ID..." style="flex: 1;" />
+            <button id="btn-admin-lookup">Tra cứu</button>
+          </div>
+          <div id="admin-lookup-result" style="font-size: 12px; color: #1e3a8a; margin-bottom: 6px; min-height: 18px;"></div>
+
+          <!-- Các thao tác Admin Deck -->
+          <div style="font-size: 12px; font-weight: bold; margin-bottom: 4px;">Thao tác Admin trên Deck này:</div>
+          <div class="row">
+            <button id="btn-admin-reveal" title="Lật những lá trên đầu">Lật bài (Reveal 1)</button>
+            <button id="btn-admin-clear-reveal" title="Trả bài đã lật về đáy">Dọn Reveal (Về đáy)</button>
+            <button id="btn-admin-shuffle">Xào bài (Shuffle)</button>
+          </div>
+          <div class="row">
+            <button id="btn-admin-draw">Rút bài (Draw)</button>
+            <button id="btn-admin-take-card" title="Lấy lá theo ID nhập ở trên ra tay">Lấy lá từ Deck ra tay</button>
+            <button id="btn-admin-take-reveal" title="Lấy lá theo ID từ chồng reveal ra tay">Lấy từ Reveal ra tay</button>
+          </div>
+          <div class="row">
+            <button id="btn-admin-put-top">Đặt lá (từ tay) vào Đầu deck</button>
+            <button id="btn-admin-put-bottom">Đặt lá (từ tay) vào Đáy deck</button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Bottom Panel: Action Log -->
+    <div class="panel" style="margin-top: 12px;">
+      <h4>Action Log & Results</h4>
+      <pre id="action-log" style="background: #1e293b; color: #f8fafc; padding: 10px; max-height: 140px; overflow: auto; border-radius: 4px; font-size: 13px; margin: 0;"></pre>
+    </div>
+  </div>
+
+  <script type="module" src="/backend/client.ts"></script>
+</body>
+</html>

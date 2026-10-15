@@ -1,0 +1,295 @@
+/* ==========================================================================
+   CARD HAND CONTAINER & FAN STYLES (DEAD OF WINTER)
+   Theo đặc tả chi tiết tại CARD_HOLD.md
+   ========================================================================== */
+
+:root {
+  --card-width: 150px;
+  --card-height: 204px; /* Tỉ lệ ~ 0.74 theo chuẩn ảnh card */
+  --card-peek-offset: 95px; /* Chiều cao lộ ra ở trạng thái resting (~50%) */
+  --hand-transition: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 1. Container neo cố định ở Bottom-Center */
+.hand-root-container {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none; /* Chỉ bài và nút bấm mới nhận pointer */
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.35s var(--hand-transition);
+}
+
+/* Trạng thái thu gọn hoàn toàn (Collapsed state) */
+.hand-root-container.is-collapsed {
+  transform: translateX(-50%) translateY(calc(var(--card-height) + 10px));
+}
+
+/* Nút Toggle Ẩn/Hiện cụm bài */
+.hand-toggle-bar {
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: none;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 5px 16px;
+  border-radius: 12px 12px 0 0;
+  cursor: pointer;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  margin-bottom: -1px;
+  z-index: 1010;
+}
+
+.hand-toggle-bar:hover {
+  background: rgba(30, 41, 59, 0.95);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+/* Khu vực hàng bài xếp lớp */
+.hand-fan-tray {
+  pointer-events: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: var(--card-height);
+  padding: 0 40px;
+  position: relative;
+  /* Giới hạn vùng đáy để resting chỉ nhô lên 40%-50% */
+  margin-bottom: calc(-1 * (var(--card-height) - var(--card-peek-offset)));
+  transition: margin-bottom 0.3s var(--hand-transition);
+}
+
+.hand-fan-tray:hover {
+  /* Khi rê chuột vào khay bài, có thể trồi lên nhẹ để dễ duyệt */
+  margin-bottom: calc(-1 * (var(--card-height) - var(--card-peek-offset) - 15px));
+}
+
+/* 2. Wrapper của từng lá bài (Card Item) */
+.card-wrapper {
+  position: relative;
+  width: var(--card-width);
+  height: var(--card-height);
+  flex-shrink: 0;
+  transition: transform 0.25s var(--hand-transition),
+              margin 0.25s var(--hand-transition),
+              opacity 0.2s ease,
+              filter 0.2s ease;
+  cursor: grab;
+  will-change: transform;
+}
+
+.card-wrapper.is-dragging {
+  cursor: grabbing;
+  transition: none !important; /* Khi kéo thì bám dính theo chuột, không bị delay */
+  z-index: 2000 !important;
+}
+
+/* Snap-back animation khi thả trượt */
+.card-wrapper.is-snapping-back {
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  pointer-events: none;
+}
+
+/* Khóa chống click spam */
+.card-wrapper.is-locked {
+  pointer-events: none !important;
+}
+
+/* Thẻ bài hiển thị thực tế */
+.card-visual {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background-color: #1e293b;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  display: block;
+}
+
+/* Huy hiệu tên và biểu tượng trên đỉnh bài (nhô lên khi resting) */
+.card-peek-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 6px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.2) 80%, transparent 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+
+.card-symbol-tag {
+  background: rgba(37, 99, 235, 0.85);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+/* Trạng thái Hover / Focus (Nhấc bài lên để đọc) */
+.card-wrapper:hover:not(.is-dragging):not(.is-locked) {
+  z-index: 1500 !important;
+}
+
+.card-wrapper:hover:not(.is-dragging):not(.is-locked) .card-visual {
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 15px rgba(56, 189, 248, 0.5);
+  border-color: #38bdf8;
+}
+
+/* Trạng thái Selected (Nhấp 1 lần để chọn cố định) */
+.card-wrapper.is-selected .card-visual {
+  border-color: #f59e0b;
+  box-shadow: 0 10px 25px rgba(245, 158, 11, 0.5), 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+/* Menu thao tác nhanh khi lá bài được Selected */
+.card-action-menu {
+  position: absolute;
+  top: -48px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 5px 8px;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+  z-index: 1600;
+  pointer-events: auto;
+  animation: popIn 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.card-action-btn {
+  background: #334155;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.card-action-btn:hover {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.card-action-btn.cancel-btn {
+  background: #475569;
+}
+.card-action-btn.cancel-btn:hover {
+  background: #ef4444;
+  border-color: #f87171;
+}
+
+/* Trạng thái không khả dụng (Ineligible / Dim / Grayscale) */
+.card-wrapper.is-ineligible {
+  filter: grayscale(85%) brightness(0.65);
+  cursor: not-allowed;
+}
+
+.card-wrapper.is-ineligible:hover {
+  filter: grayscale(70%) brightness(0.75);
+}
+
+/* ==========================================================================
+   SANDBOX DROP TARGET ZONES (KIỂM THỬ ĐỘC LẬP)
+   ========================================================================== */
+
+.drop-zones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.drop-zone-card {
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(4px);
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 130px;
+  transition: all 0.2s ease;
+}
+
+/* Khi có bài kéo vào vùng hợp lệ */
+.drop-zone-card.is-candidate-eligible {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Khi con trỏ đang hover chính xác vào vùng này */
+.drop-zone-card.is-hovered {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+  transform: scale(1.02);
+}
+
+/* Khi bài kéo không hợp lệ */
+.drop-zone-card.is-candidate-ineligible {
+  opacity: 0.35;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+

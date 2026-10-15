@@ -1,0 +1,168 @@
+{
+     "data": [
+          {
+               "location": "starter",
+               "data": [
+                    {
+                         "name": "Food",
+                         "usage": "waste",
+                         "isEquip": false,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Add 1 food token to the colony food supply."
+                         },
+                         "number": 5,
+                         "linkImage": ""
+                    },
+                    {
+                         "name": "Medicine",
+                         "usage": "waste",
+                         "isEquip": false,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Remove 1 wound of any type from a survivor you control."
+                         },
+                         "number": 5,
+                         "linkImage": ""
+                    },
+                    {
+                         "name": "Junk",
+                         "usage": "waste",
+                         "isEquip": false,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Reroll 1 of your unused action dice."
+                         },
+                         "number": 5,
+                         "linkImage": ""
+                    },
+                    {
+                         "name": "Fuel",
+                         "usage": "waste",
+                         "isEquip": false,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Play when moving a survivor. Do not roll the exposure die during this move."
+                         },
+                         "number": 5,
+                         "linkImage": ""
+                    }
+               ]
+          },
+          {
+               "location": "policeStation",
+               "data": [
+                    {
+                         "name": "Pistol",
+                         "usage": "equip",
+                         "isEquip": true,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Equip to a survivor. Once per round, expend an action die to kill 1 zombie at this survivor's location without rolling for exposure."
+                         },
+                         "number": 3,
+                         "linkImage": ""
+                    },
+                    {
+                         "name": "Shotgun",
+                         "usage": "equip",
+                         "isEquip": true,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Equip to a survivor. Once per round, expend an action die to kill up to 2 zombies at this survivor's location without rolling for exposure."
+                         },
+                         "number": 2,
+                         "linkImage": ""
+                    },
+                    {
+                         "name": "Sniper Rifle",
+                         "usage": "equip",
+                         "isEquip": true,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Equip to a survivor. Once per round, expend an action die to kill 1 zombie at any location without rolling for exposure."
+                         },
+                         "number": 1,
+                         "linkImage": ""
+                    },
+                    {
+                         "name": "Flashlight",
+                         "usage": "equip",
+                         "isEquip": true,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Equip to a survivor. When this survivor searches, draw and view 1 additional item card."
+                         },
+                         "number": 2,
+                         "linkImage": ""
+                    },
+                    {
+                         "name": "Fuel",
+                         "usage": "waste",
+                         "isEquip": false,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Play when moving a survivor. Do not roll the exposure die during this move."
+                         },
+                         "number": 3,
+                         "linkImage": ""
+                    },
+                    {
+                         "name": "Food",
+                         "usage": "waste",
+                         "isEquip": false,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Add 1 food token to the colony food supply."
+                         },
+                         "number": 2,
+                         "linkImage": ""
+                    },
+                    {
+                         "name": "Medicine",
+                         "usage": "waste",
+                         "isEquip": false,
+                         "effect": {
+                              "condition": [],
+                              "cost": [],
+                              "activeEffect": [],
+                              "passiveEffect": [],
+                              "description": "Remove 1 wound of any type from a survivor you control."
+                         },
+                         "number": 1,
+                         "linkImage": ""
+                    }
+               ]
+          }
+     ]
+}
